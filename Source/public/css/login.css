@@ -1,0 +1,140 @@
+:root{
+    --font-style: 'Nunito Sans', san-serif;
+}
+
+* {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+body{
+    background: #131315;
+    font-family: var(--font-style);
+}
+
+.login-box{
+    position: absolute;
+    top:50%;
+    left: 50%;
+    width: 700px;
+    height: 400px;
+    padding: 40px;
+    transform: translate(-50%, -50%);
+    background: #242026;
+    box-shadow: 0 15px 25px aqua;
+    border-radius: 10px;
+}
+.error {
+    color: red;
+    margin-top: .5rem;
+}
+.login-box h2{
+    margin: 0 0 30px;
+    padding: 0;
+    color: red;
+    text-align: center;
+}
+
+.login-box .user-box input{
+    position: relative;
+    width: 100%;
+    padding: 10px 0;
+    font-size: 16px;
+    color: #fff;
+    margin-bottom: 30px;
+    border: none;
+    border-bottom: 1px solid #fff;
+    outline: none;
+    background: transparent;
+}
+
+.login-box .user-box label{
+    position: relative;
+    left: 0;
+    top: -60px;
+    padding: 10px 0;
+    font-size: 16px;
+    color: #fff;
+    pointer-events: none;
+    transition: .5s;
+}
+
+.login-box .user-box input:focus~label,
+.login-box .user-box input:valid~label{
+    top: -85px;
+    left: 0;
+    color: aqua;
+    font-size: 12px;
+}
+
+#submit{
+    padding: 10px 20px;
+    color: #CBBDDB;
+    font-size: 1rem;
+    text-decoration: none;
+    text-transform: uppercase;
+    overflow: hidden;
+    transition: .5s;
+    letter-spacing: 4px;
+    border: 1px solid aqua;
+    margin: auto;
+    text-align: center;
+    background: transparent;
+}
+
+#submit:hover{
+    background: #8F7CEC;
+    color: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 5px #8F7CEC, 0 0 25px #8F7CEC,
+                0 0 50px #8F7CEC, 0 0 100px #8F7CEC;
+}
+
+.button-form{
+    display: flex;
+    flex-direction: row;
+    margin-top: 20px;
+}
+
+#register{
+    font-size: 14px;
+    text-decoration: none;
+    color: violet;
+    margin: auto;
+    width: 60%;
+    text-align: center;
+}
+
+#register a {
+    margin: auto;
+    color:rgb(18, 245, 245);
+    text-decoration: none;
+}
+
+.message {
+    position: absolute;
+    top: 0;
+    margin: 0 auto;
+    max-width: 80%;
+    border-radius: 1rem;
+    background-color: aqua;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 10000;
+    gap: 1.5rem;
+}
+
+.message span {
+    font-size: 1rem;
+    color: var(--black);
+    text-align: center;
+}
+
+.message i {
+    cursor: pointer;
+    color: var(--red);
+    font-size: 1.5rem;
+}
+
