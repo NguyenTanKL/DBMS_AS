@@ -74,29 +74,36 @@ session_start();
     </div>
     <div class="box-container">
     <?php  
-         $select_products = mysqli_query($conn, "SELECT * FROM `products` ORDER BY `date` DESC LIMIT 8") or die('query failed');
+         // Query to fetch the latest 8 products
+        $query = "SELECT TOP 8 * FROM products ORDER BY date DESC";
+        $stmt = sqlsrv_query($conn, $query);
 
-         if(mysqli_num_rows($select_products) > 0){
-            while($fetch_products = mysqli_fetch_assoc($select_products)){
-      ?>
-            <form method="post" action="../Controllers/cartController.php"> 
-                <div class="box" data-aos="fade-up" data-aos-delay="300">
-                    <div class="image"> 
-                        <img src="<?php echo $fetch_products['image']; ?>" alt="">
-                    </div>
-                    <div class="content">
-                        <h3><?php echo $fetch_products['name']; ?></h3>
-                        <a href="detail_book.php?get_id=<?php echo $fetch_products['product_id']; ?>">Xem thêm<i class="fas fa-angle-right"></i></a>
-                    </div>
-                    <div class="purchase">
-                        <h3>
-                                <?php echo $fetch_products['price'];?>
+        // Check if query execution was successful
+        if ($stmt === false) {
+            die(print_r(sqlsrv_errors(), true));
+        }
+
+        // Check if there are rows returned
+        if (sqlsrv_has_rows($stmt)) {
+            while ($fetch_products = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    ?>
+                <form method="post" action="../Controllers/cartController.php"> 
+                    <div class="box" data-aos="fade-up" data-aos-delay="300">
+                        <div class="image"> 
+                            <img src="<?php echo htmlspecialchars($fetch_products['image']); ?>" alt="">
+                        </div>
+                        <div class="content">
+                            <h3><?php echo htmlspecialchars($fetch_products['name']); ?></h3>
+                            <a href="detail_book.php?get_id=<?php echo $fetch_products['product_id']; ?>">Xem thêm<i class="fas fa-angle-right"></i></a>
+                        </div>
+                        <div class="purchase">
+                            <h3>
+                                <?php echo htmlspecialchars($fetch_products['price']); ?>
                                 <span class="rate">₫</span></h3>
-                        </h3>
                             <input type="hidden" name="product_quantity" value="1">
-                            <input type="hidden" name="product_name" value="<?php echo $fetch_products['name']; ?>">
-                            <input type="hidden" name="product_price" value="<?php echo $fetch_products['price']; ?>">
-                            <input type="hidden" name="product_image" value="<?php echo $fetch_products['image']; ?>">
+                            <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($fetch_products['name']); ?>">
+                            <input type="hidden" name="product_price" value="<?php echo htmlspecialchars($fetch_products['price']); ?>">
+                            <input type="hidden" name="product_image" value="<?php echo htmlspecialchars($fetch_products['image']); ?>">
                             <button type="submit" name="add_to_cart">
                                 <i class="fas fa-shopping-cart"></i>
                             </button>
@@ -109,6 +116,7 @@ session_start();
         }else{
             echo '<p class="empty">no products added yet!</p>';
         }
+        sqlsrv_free_stmt($stmt);
       ?>
     </div>
 </section>
@@ -119,27 +127,35 @@ session_start();
     </div>
     <div class="box-container ">
     <?php  
-         $select_combo_products = mysqli_query($conn, "SELECT * FROM `combo_products` ORDER BY combo_id DESC LIMIT 4") or die('query failed');
-         if(mysqli_num_rows($select_combo_products) > 0){
-            while($fetch_combo_products = mysqli_fetch_assoc($select_combo_products)){
-      ?>
+         // Query to select the latest 4 combo products
+        $query = "SELECT TOP 4 * FROM combo_products ORDER BY combo_id DESC";
+        $stmt = sqlsrv_query($conn, $query);
+
+        // Check for query execution errors
+        if ($stmt === false) {
+            die(print_r(sqlsrv_errors(), true));
+        }
+
+        // Check if rows are returned
+        if (sqlsrv_has_rows($stmt)) {
+            while ($fetch_combo_products = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
+    ?>
                 <form method="post" action="../Controllers/cartController.php"> 
                     <div class="box combo_box" data-aos="fade-up" data-aos-delay="300">
                         <div class="image"> 
-                            <img src="<?php echo $fetch_combo_products['image_combo']; ?>" alt="">
+                            <img src="<?php echo htmlspecialchars($fetch_combo_products['image_combo']); ?>" alt="">
                         </div>
                         <div class="content">
-                            <h3><?php echo $fetch_combo_products['combo_name']; ?></h3>
+                            <h3><?php echo htmlspecialchars($fetch_combo_products['combo_name']); ?></h3>
                             <a href="detail_combo_book.php?get_id=<?php echo $fetch_combo_products['combo_id']; ?>">Xem thêm<i class="fas fa-angle-right"></i></a>
                         </div>
                         <div class="purchase">
-                            <h3><?php echo $fetch_combo_products['price'];?>
-                            <span class="rate">₫</span></h3>
-                        </h3>
+                            <h3><?php echo htmlspecialchars($fetch_combo_products['price']); ?>
+                                <span class="rate">₫</span></h3>
                             <input type="hidden" name="product_quantity" value="1">
-                            <input type="hidden" name="product_name" value="<?php echo $fetch_combo_products ['combo_name']; ?>">
-                            <input type="hidden" name="product_price" value="<?php echo $fetch_combo_products['price']; ?>">
-                            <input type="hidden" name="product_image" value="<?php echo $fetch_combo_products['image_combo']; ?>">
+                            <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($fetch_combo_products['combo_name']); ?>">
+                            <input type="hidden" name="product_price" value="<?php echo htmlspecialchars($fetch_combo_products['price']); ?>">
+                            <input type="hidden" name="product_image" value="<?php echo htmlspecialchars($fetch_combo_products['image_combo']); ?>">
                             <button type="submit" name="add_to_cart">
                                 <i class="fas fa-shopping-cart"></i>
                             </button>
@@ -147,11 +163,13 @@ session_start();
                     </div>
                 </form>
 
+
       <?php
             }
         }else{
             echo '<p class="empty">no products added yet!</p>';
         }
+        sqlsrv_free_stmt($stmt);
       ?>
     </div>
   
@@ -173,47 +191,64 @@ session_start();
 
     <div class="box-container" data-aos="fade-left" data-aos-delay="600">
         <?php
-            $select_authors = mysqli_query($conn, "SELECT * FROM `authors` LIMIT 4") or die('query failed');
-            if(mysqli_num_rows($select_authors) > 0){
-            while( $authors = mysqli_fetch_assoc($select_authors)){
+            // Query to fetch the first 4 authors
+            $query1 = "SELECT TOP 4 * FROM authors";
+            $stmt1 = sqlsrv_query($conn, $query1);
+
+            if ($stmt1 === false) {
+                die(print_r(sqlsrv_errors(), true));
+            }
+
+            while ($authors = sqlsrv_fetch_array($stmt1, SQLSRV_FETCH_ASSOC)) {
         ?>
         <div class="box">
-            <p><?php echo $authors['slogan']?></p>
+            <p><?php echo htmlspecialchars($authors['slogan']); ?></p>
             <div class="user">
-            <img src="<?php echo $authors['image']; ?>" alt="">
+                <img src="<?php echo htmlspecialchars($authors['image']); ?>" alt="">
                 <div class="info">
-                    <h3><?php echo $authors['name']?></h3>
-                    <a href="<?php echo $authors['information']?>">
-                        Thông tin tác giả</a>
+                    <h3><?php echo htmlspecialchars($authors['name']); ?></h3>
+                    <a href="<?php echo htmlspecialchars($authors['information']); ?>">Thông tin tác giả</a>
                 </div>
             </div>
         </div>
         <?php
-        }
-        }
+            }
+            sqlsrv_free_stmt($stmt1);
         ?>
     </div>
     
     <div class="box-containers" data-aos="fade-left" data-aos-delay="600">
         <?php
-            $select_authors = mysqli_query($conn, "SELECT * FROM `authors` LIMIT 18446744073709551615 OFFSET 4") or die('query failed');
-            if(mysqli_num_rows($select_authors) > 0){
-            while( $authors = mysqli_fetch_assoc($select_authors)){
+            // Query to fetch authors after the first 4
+            $query2 = "
+                SELECT * 
+                FROM authors 
+                WHERE id NOT IN (
+                    SELECT TOP 4 id FROM authors ORDER BY id
+                )
+                ORDER BY id
+            ";
+            $stmt2 = sqlsrv_query($conn, $query2);
+
+            if ($stmt2 === false) {
+                die(print_r(sqlsrv_errors(), true));
+            }
+
+            while ($authors = sqlsrv_fetch_array($stmt2, SQLSRV_FETCH_ASSOC)) {
         ?>
         <div class="box">
-            <p><?php echo $authors['slogan']?></p>
+            <p><?php echo htmlspecialchars($authors['slogan']); ?></p>
             <div class="user">
-            <img src="<?php echo $authors['image']; ?>" alt="">
+                <img src="<?php echo htmlspecialchars($authors['image']); ?>" alt="">
                 <div class="info">
-                    <h3><?php echo $authors['name']?></h3>
-                    <a href="<?php echo $authors['information']?>">
-                        Thông tin tác giả</a>
+                    <h3><?php echo htmlspecialchars($authors['name']); ?></h3>
+                    <a href="<?php echo htmlspecialchars($authors['information']); ?>">Thông tin tác giả</a>
                 </div>
             </div>
         </div>
         <?php
-        }
-        }
+            }
+            sqlsrv_free_stmt($stmt2);
         ?>
     </div>
     
