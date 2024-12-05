@@ -1,19 +1,30 @@
 <?php
+require '../../vendor/autoload.php';
 include '../../config/config.php';
-// $get_author = mysqli_query($conn, "SELECT * FROM `authors` WHERE ")
+use MongoDB\Client;
+
+// Kết nối với MongoDB
+try {
+    $client = new Client("mongodb://localhost:27017");
+    $db = $client->database_bookstore; // Tên database MongoDB
+    $authors_collection = $db->authors; // Tên collection MongoDB
+} catch (Exception $e) {
+    die("Kết nối MongoDB thất bại: " . $e->getMessage());
+}
+
 session_start();
 
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý tác giả</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.0.0/dist/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
-    <!-- <link rel="stylesheet" href="../../public/css/admin.css"> -->
+    <link rel="stylesheet" href="../../public/css/admin.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         .blackboard {
@@ -99,7 +110,6 @@ session_start();
     </style>
     <link rel="stylesheet" href="../../public/css/admin.css">
 </head>
-
 <body>
     <?php include 'admin_header.php'; ?>
 
@@ -107,19 +117,14 @@ session_start();
         <div>
             <div class="blackboard">
                 <div class="form">
-                    <!-- <hr><br> -->
                     <p>
                         <label for="name"><b>Tên tác giả&emsp;</b></label>
-                        <input type="text" placeholder="Nhập tên" name="name">
-                        <br>
+                        <input type="text" placeholder="Nhập tên" name="name" style="margin-left:6px;">
                     </p>
-                    <p><br>
                     <p>
                         <label for="slogan"><b>Description&emsp;</b></label>
-                        <input type="text" placeholder="Nhập tên" name="slogan">
-                        <br>
+                        <input type="text" placeholder="Nhập mô tả" name="slogan">
                     </p>
-                    <p><br>
                     <p class="wipeout">
                         <span style="float: left; margin-left: 10%">
                             <input type="submit" class="searchandclear" name="search" value="Tìm Kiếm" />
@@ -133,218 +138,161 @@ session_start();
         </div>
     </form>
     <br>
-    <section class="show-products" style="margin-top:30px; ">
-        <div class="box-container" style="border-bottom: 1px solid #111;padding-bottom:30px">
-            <?php
-            $sql_authors = null;
-            if (isset($_POST['search'])) {
-                $_POST['name'] = addslashes($_POST['name']);
-                $_POST['slogan'] = addslashes($_POST['slogan']);
-                if (!empty($_POST['name']) && !empty($_POST['slogan'])) {
-                    $sql_authors = mysqli_query($conn, "SELECT * FROM `authors` WHERE name LIKE '%{$_POST['name']}%' AND slogan LIKE '%{$_POST['slogan']}%'") or die('query failed');
-                } elseif (!empty($_POST['name'])) {
-                    $sql_authors = mysqli_query($conn, "SELECT * FROM `authors` WHERE name LIKE '%{$_POST['name']}%'") or die('query failed');
-                } elseif (!empty($_POST['slogan'])) {
-                    $sql_authors = mysqli_query($conn, "SELECT * FROM `authors` WHERE slogan LIKE '%{$_POST['slogan']}%'") or die('query failed');
-                }
-                if ($sql_authors && $sql_authors->num_rows > 0) {
-                    while ($fetch_authors_sql = mysqli_fetch_assoc($sql_authors)) {
-            ?>
-                        <div class="box">
-                            <img src="<?php echo $fetch_authors_sql['image']; ?>" alt="">
-                            <div class="info-author">
-                                <h3 class="name"><?php echo $fetch_authors_sql['name']; ?></h3>
-                                <p class="slogan"><?php echo $fetch_authors_sql['slogan']; ?></p>
-                                <form action="../Controllers/adminAuthorController.php" method="post">
-                                    <a href="<?php echo $fetch_authors_sql['information']; ?>" class="detail_book">Xem thêm về tác
-                                        giả
-                                        <i class="fas fa-angle-right"></i> </a>
-                                    <div style="display:flex;justify-content:center;gap:0.5rem; ">
-                                        <a href="admin_author.php?update=<?php echo $fetch_authors_sql['id']; ?>" class="option-btn">Cập
-                                            nhật</a>
-                                        <input type="submit" value="Xóa" onclick="return confirm('Bạn chắc chắn muốn xóa?');" class="delete-btn" name="delete_author">
-                                        <input type="hidden" value="<?php echo $fetch_authors_sql['id'] ?>" name="author_id">
-                                    </div>
-                                </form>
-
-                            </div>
-                        </div>
-                    <?php
-                    };
-                    ?>
-            <?php
-                } else {
-                    echo "<p class='empty'>Không tìm thấy tác giả!!!</p>";
-                }
-            }
-            ?>
-        </div>
-    </section>
-
-    <br>
     <section class="add-products">
-        <?php
-        if (isset($_GET['add-product-book'])) {
-        ?>
-            <form action="../Controllers/adminAuthorController.php" method="post">
-                <h3>Thêm tác giả</h3>
-                <input type="text" name="name" class="box" placeholder="Nhập tên tác giả" required>
-                <input type="text" name="image" class="box" placeholder="Nhập ảnh của tác giả" required>
-                <input type="text" name="slogan" class="box" placeholder="Nhập slogan" required>
-                <input type="text" name="information" class="box" placeholder="Nhập link thông tin của tác giả" required>
-                <div style="display:flex;justify-content:center;gap:0.5rem; ">
-                    <input type="submit" value="Thêm" name="add_author" class="btn">
-                    <a href="admin_author.php" class="delete-btn">Đóng</a>
+    <?php
+    if (isset($_GET['add-product-book'])) {
+    ?>
+        <form action="../Controllers/adminAuthorController.php" method="post">
+            <h3>Thêm tác giả</h3>
+            <input type="text" name="name" class="box" placeholder="Nhập tên tác giả" required>
+            <input type="text" name="image" class="box" placeholder="Nhập ảnh của tác giả" required>
+            <input type="text" name="slogan" class="box" placeholder="Nhập slogan" required>
+            <input type="text" name="information" class="box" placeholder="Nhập link thông tin của tác giả" required>
+            <div style="display:flex;justify-content:center;gap:0.5rem;">
+                <input type="submit" value="Thêm" name="add_author" class="btn">
+                <a href="admin_author.php" class="delete-btn">Đóng</a>
+            </div>
+        </form>
+    <?php
+    } else {
+        echo '<script>document.querySelector(".add-products").style.display = "none";</script>';
+    }
+    ?>
+</section>
+
+<section class="edit-product-form">
+    <?php
+    if (isset($_GET['update'])) {
+        $update_id = $_GET['update'];
+        $update_author = $authors_collection->findOne(['_id' => new MongoDB\BSON\ObjectId($update_id)]);
+        if ($update_author) {
+    ?>
+            <form action="../Controllers/adminAuthorController.php" method="post" enctype="multipart/form-data">
+                <input type="hidden" name="update_id" value="<?php echo $update_author['_id']; ?>">
+                <input type="text" name="update_name" value="<?php echo $update_author['name']; ?>" class="box" required placeholder="Nhập tên tác giả cần cập nhật">
+                <input type="text" class="box" name="update_image" value="<?php echo $update_author['image']; ?>" placeholder="Nhập url ảnh tác giả cần cập nhật">
+                <input type="text" class="box" name="update_slogan" value="<?php echo $update_author['slogan']; ?>" placeholder="Nhập slogan cần cập nhật">
+                <input type="text" class="box" name="update_information" value="<?php echo $update_author['information']; ?>" placeholder="Nhập link thông tin tác giả cập nhật">
+                <div style="display:flex;justify-content:center;gap:0.5rem;">
+                    <input type="submit" value="Lưu" name="update_author" class="btn">
+                    <input type="submit" value="Reset" name="reset_author" id="close-update" class="delete-btn">
                 </div>
             </form>
-        <?php
-        } else {
-            echo '<script>document.querySelector(".add-products").style.display = "none";</script>';
+    <?php
         }
-        ?>
-    </section>
-    <section class="show-products" style="margin-top:30px;">
-        <div class="list-add-products">
-            <div class="list-products">
-                <h1 class="title1">Danh Sách Tác Giả</h1>
-            </div>
-            <div class="add-products-button">
-                <a href="admin_author.php?add-product-book" class="option-btn">Thêm Tác Giả</a>
-            </div>
-        </div>
-        <div class="box-container" style="margin-top:40px;">
-            <?php
-            $per_page = 6;
-            $total_pages = 0;
-            $current_page = 0;
-            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-            $start = ($page - 1) * $per_page;
-            $select_authors = mysqli_query($conn, "SELECT * FROM `authors`") or die('query failed');
-            $sql = "SELECT * FROM `authors`";
-            // $author = $conn->query($sql);
-            if (mysqli_num_rows($select_authors) > 0) {
-                while ($row = mysqli_fetch_assoc($select_authors)) {
-            ?>
-                    <?php
-                    $total_products = mysqli_query($conn, "SELECT COUNT(*) AS total FROM `authors`") or die('query failed');
-                    $total_products = mysqli_fetch_assoc($total_products)['total'];
-                    $total_pages = ceil($total_products / $per_page);
-                    $current_page = isset($_GET['page']) ? $_GET['page'] : 1;
-                    $url = "http://localhost:3000/admin/View/admin_author.php?page=";
-                    // Tính toán giới hạn của LIMIT trong câu truy vấn SQL
-                    $offset = ($current_page - 1) * $per_page;
-                    // Truy vấn sản phẩm trong cơ sở dữ liệu với LIMIT và OFFSET
-                    $select_authors = mysqli_query($conn, "SELECT * FROM authors LIMIT $per_page OFFSET $offset") or die('query failed');
-                    if (mysqli_num_rows($select_authors) > 0) {
-                        while ($row = mysqli_fetch_assoc($select_authors)) {
-                    ?>
-                            <div class="box">
-                                <img src="<?php echo $row['image']; ?>" alt="">
-                                <div class="info-author">
-                                    <h3 class="name"><?php echo $row['name']; ?></h3>
-                                    <p class="slogan"><?php echo $row['slogan']; ?></p>
-                                    <form action="../Controllers/adminAuthorController.php" method="post">
-                                        <a href="<?php echo $row['information']; ?>" class="detail_book">Xem thêm về tác giả <i class="fas fa-angle-right"></i> </a>
-                                        <div style="display:flex;justify-content:center;gap:0.5rem; ">
-                                            <a href="admin_author.php?update=<?php echo $row['id']; ?>" class="option-btn">Cập nhật</a>
-                                            <input type="submit" value="Xóa" onclick="return confirm('Bạn chắc chắn muốn xóa?');" class="delete-btn" name="delete_author">
-                                            <input type="hidden" value="<?php echo $row['id'] ?>" name="author_id">
-                                        </div>
-                                    </form>
+    } else {
+        echo '<script>document.querySelector(".edit-product-form").style.display = "none";</script>';
+    }
+    ?>
+</section>
 
-                                </div>
+<section class="show-products" style="margin-top:30px;">
+    <div class="list-add-products">
+        <div class="list-products">
+            <h1 class="title1">Danh Sách Tác Giả</h1>
+        </div>
+        <div class="add-products-button">
+            <a href="admin_author.php?add-product-book" class="option-btn">Thêm Tác Giả</a>
+        </div>
+    </div>
+    <div class="box-container" style="margin-top: 40px; border-bottom: 1px solid #111;padding-bottom:30px">
+        <?php
+        // Lấy dữ liệu phân trang từ MongoDB
+        $limit = 6; // Số lượng tác giả mỗi trang
+        $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1; // Trang hiện tại
+        $skip = ($current_page - 1) * $limit; // Số lượng bản ghi bỏ qua
+
+        // Xử lý tham số tìm kiếm từ form
+        $authors_query = [];
+        $search_params = [];
+        if (isset($_POST['search'])) {
+            $name = htmlspecialchars($_POST['name']);
+            $slogan = htmlspecialchars($_POST['slogan']);
+            if (!empty($name) && !empty($slogan)) {
+                $authors_query = [
+                    'name' => ['$regex' => $name, '$options' => 'i'],
+                    'slogan' => ['$regex' => $slogan, '$options' => 'i']
+                ];
+                $search_params = ['name' => $name, 'slogan' => $slogan];
+            } elseif (!empty($name)) {
+                $authors_query = ['name' => ['$regex' => $name, '$options' => 'i']];
+                $search_params = ['name' => $name];
+            } elseif (!empty($slogan)) {
+                $authors_query = ['slogan' => ['$regex' => $slogan, '$options' => 'i']];
+                $search_params = ['slogan' => $slogan];
+            }
+        }
+
+        // Tính lại số lượng tác giả theo điều kiện tìm kiếm
+        $total_authors = $authors_collection->countDocuments($authors_query);
+        $total_pages = ceil($total_authors / $limit); // Tổng số trang
+
+        // Lấy các tác giả cho trang hiện tại với điều kiện tìm kiếm
+        $cursor = $authors_collection->find($authors_query, [
+            'skip' => $skip,
+            'limit' => $limit
+        ]);
+        $authors = iterator_to_array($cursor);
+
+        // Kiểm tra số lượng tác giả trước khi hiển thị
+        if (count($authors) == 0) {
+            echo "<p class='empty'>Không tìm thấy tác giả!!!</p>";
+        } else {
+            foreach ($authors as $author) {
+                ?>
+                <div class="box">
+                    <img src="<?php echo $author['image']; ?>" alt="">
+                    <div class="info-author">
+                        <h3 class="name"><?php echo $author['name']; ?></h3>
+                        <p class="slogan"><?php echo $author['slogan']; ?></p>
+                        <form action="../Controllers/adminAuthorController.php" method="post">
+                            <a href="<?php echo $author['information']; ?>" class="detail_book">Xem thêm về tác giả <i class="fas fa-angle-right"></i> </a>
+                            <div style="display:flex;justify-content:center;gap:0.5rem;">
+                                <a href="admin_author.php?update=<?php echo $author['_id']; ?>" class="option-btn">Cập nhật</a>
+                                <input type="submit" value="Xóa" onclick="return confirm('Bạn chắc chắn muốn xóa?');" class="delete-btn" name="delete_author">
+                                <input type="hidden" value="<?php echo $author['_id']; ?>" name="author_id">
                             </div>
-            <?php
-                        }
-                    }
-                }
-            } else {
-                echo '<p class="empty">Không có tác giả nào tại đây</p>';
+                        </form>
+                    </div>
+                </div>
+                <?php
             }
-            ?>
-        </div>
-        <?php
-        if ($total_pages != null || $current_page != null) {
-        ?>
-            <nav aria-label="Page navigation example" class="toolbar">
-                <ul class="pagination justify-content-center d-flex flex-wrap">
-                    <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
-                        <a class="page-link" href="<?php echo $url . ($current_page - 1); ?>" tabindex="-1">Previous</a>
-                    </li>
-                    <?php
-                    $start_page = ($current_page <= 3) ? 1 : $current_page - 2;
-                    $end_page = ($total_pages - $current_page >= 2) ? $current_page + 2 : $total_pages;
-                    if ($start_page > 1) {
-                        echo '<li class="page-item"><a class="page-link" href="' . $url . '1">1</a></li>';
-                        if ($start_page > 2) {
-                            echo '<li class="page-item disabled"><a class="page-link">...</a></li>';
-                        }
-                    }
-                    $num_displayed_pages = $end_page - $start_page + 1;
-                    $display_ellipsis = ($num_displayed_pages >= 7);
-                    for ($i = $start_page; $i <= $end_page; $i++) {
-                        if ($num_displayed_pages >= 7) {
-                            if ($i == $start_page + 3 || $i == $end_page - 3) {
-                                if (!$display_ellipsis) {
-                                    echo '<li class="page-item"><a class="page-link" href="#">' . $i . '</a></li>';
-                                }
-                                continue;
-                            }
-                        }
-                        if ($num_displayed_pages <= 5 || ($i >= $current_page - 2 && $i <= $current_page + 2)) {
-                            echo '<li class="page-item ' . (($i == $current_page) ? 'active' : '') . '"><a class="page-link" href="' . $url . $i . '">' . $i . '</a></li>';
-                        }
-                    }
-                    if ($end_page < $total_pages) {
-                        if ($end_page < $total_pages - 1) {
-                            echo '<li class="page-item disabled"><a class="page-link">...</a></li>';
-                        }
-                        echo '<li class="page-item"><a class="page-link" href="' . $url . $total_pages . '">' . $total_pages . '</a></li>';
-                    }
-                    ?>
-                    <li class="page-item <?php echo ($current_page >= $total_pages) ? 'disabled' : ''; ?>">
-                        <a class="page-link" href="<?php echo $url . ($current_page + 1); ?>">Next</a>
-                    </li>
-                </ul>
-            </nav>
-        <?php
         }
         ?>
-    </section>
+    </div>
 
-    <section class="edit-product-form">
-        <?php
-        if (isset($_GET['update'])) {
-            $update_id = $_GET['update'];
-            $update_query = mysqli_query($conn, "SELECT * FROM `authors` WHERE id = '$update_id'") or die('query failed');
-            if (mysqli_num_rows($update_query) > 0) {
-                while ($fetch_update = mysqli_fetch_assoc($update_query)) {
-        ?>
-                    <form action="../Controllers/adminAuthorController.php" method="post" enctype="multipart/form-data">
-                        <input type="hidden" name="update_id" value="<?php echo $fetch_update['id']; ?>">
-                        <input type="text" name="update_name" value="<?php echo $fetch_update['name']; ?>" class="box" required placeholder="Nhập tên tác giả cần cập nhật">
-                        <input type="text" class="box" name="update_image" value="<?php echo $fetch_update['image']; ?>" placeholder="Nhập url ảnh tác giả cần cập nhật">
-                        <input type="text" class="box" name="update_slogan" value="<?php echo $fetch_update['slogan']; ?>" placeholder="Nhập slogan cần cập nhật">
-                        <input type="text" class="box" name="update_information" value="<?php echo $fetch_update['information']; ?>" placeholder="Nhập link thông tin tác giả cập nhật">
-                        <div style="display:flex;justify-content:center;gap:0.5rem; ">
-                            <input type="submit" value="Lưu" name="update_author" class="btn">
-                            <input type="submit" value="Reset" name="reset_author" id="close-update" class="delete-btn">
-                        </div>
-
-                    </form>
-        <?php
+    <?php if ($total_pages > 1): ?>
+        <nav aria-label="Page navigation example" class="toolbar">
+            <ul class="pagination justify-content-center d-flex flex-wrap">
+                <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="?page=<?php echo ($current_page - 1); ?><?php echo http_build_query($search_params); ?>" tabindex="-1">Previous</a>
+                </li>
+                <?php
+                $start_page = ($current_page <= 3) ? 1 : $current_page - 2;
+                $end_page = ($total_pages - $current_page >= 2) ? $current_page + 2 : $total_pages;
+                if ($start_page > 1) {
+                    echo '<li class="page-item"><a class="page-link" href="?page=1' . http_build_query($search_params) . '">1</a></li>';
+                    if ($start_page > 2) {
+                        echo '<li class="page-item disabled"><a class="page-link">...</a></li>';
+                    }
                 }
-            }
-        } else {
-            echo '<script>document.querySelector(".edit-product-form").style.display = "none";</script>';
-        }
-        ?>
-
-    </section>
-    <script src="../../public/js/admin_script.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.2/sweetalert.min.js"></script>
+                for ($i = $start_page; $i <= $end_page; $i++) {
+                    echo '<li class="page-item ' . (($i == $current_page) ? 'active' : '') . '"><a class="page-link" href="?page=' . $i . http_build_query($search_params) . '">' . $i . '</a></li>';
+                }
+                if ($end_page < $total_pages) {
+                    echo '<li class="page-item disabled"><a class="page-link">...</a></li>';
+                    echo '<li class="page-item"><a class="page-link" href="?page=' . $total_pages . http_build_query($search_params) . '">' . $total_pages . '</a></li>';
+                }
+                ?>
+                <li class="page-item <?php echo ($current_page >= $total_pages) ? 'disabled' : ''; ?>">
+                    <a class="page-link" href="?page=<?php echo ($current_page + 1); ?><?php echo http_build_query($search_params); ?>">Next</a>
+                </li>
+            </ul>
+        </nav>
+    <?php endif; ?>
+</section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.2/sweetalert.min.js"></script>
     <?php include '../View/alert.php'; ?>
 
 </body>
-
 </html>
