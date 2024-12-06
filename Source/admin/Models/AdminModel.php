@@ -13,13 +13,13 @@ class AdminModel
     //adminProductController
     public function adminAddToProducts($name, $price, $author, $image, $description, $supplier, $publisher) {
         // Kiểm tra sản phẩm đã tồn tại chưa
-        $existingProduct = $this->db->products->findOne(['name' => $name]);
+        $existingProduct = $this->mongo->products->findOne(['name' => $name]);
         if ($existingProduct) {
             return "Sản phẩm đã tồn tại";
         }
     
         // Thêm sản phẩm vào MongoDB
-        $result = $this->db->products->insertOne([
+        $result = $this->mongo->products->insertOne([
             'name' => $name,
             'price' => $price,
             'author' => $author,
@@ -46,7 +46,7 @@ class AdminModel
     public function UpdateToProduct($update_p_id, $update_name, $update_author, $update_price, $update_image, 
                                 $update_description, $update_supplier, $update_publisher) 
     {
-        $result = $this->db->products->updateOne(
+        $result = $this->mongo->products->updateOne(
             ['_id' => new MongoDB\BSON\ObjectId($update_p_id)], 
             ['$set' => [
                 'name' => $update_name,
@@ -70,41 +70,32 @@ class AdminModel
                                       $update_description_1, $update_image_2, $update_name_2, $update_description_2, 
                                       $update_image_3, $update_name_3, $update_description_3) 
     {
-        $result = $this->db->combo_products->updateOne(
-            ['_id' => new MongoDB\BSON\ObjectId($update_combo_id)],
-            ['$set' => [
-                'combo_name' => $update_combo_name,
-                'price' => $update_price,
-                'image_combo' => $update_image_combo,
-                'description' => $update_description,
-                'description_detail' => $update_description_detail,
-                'image_1' => $update_image_1,
-                'name_1' => $update_name_1,
-                'description_1' => $update_description_1,
-                'image_2' => $update_image_2,
-                'name_2' => $update_name_2,
-                'description_2' => $update_description_2,
-                'image_3' => $update_image_3,
-                'name_3' => $update_name_3,
-                'description_3' => $update_description_3
-            ]]
+        $ComboCollections = $this->mongo->combo_products;
+        $result = $ComboCollections->updateOne(['_id' => $update_combo_id],
+        ['$set' => [
+            'combo_name' => $update_combo_name,
+            'price' => $update_price,
+            'image_combo' => $update_image_combo,
+            'description' => $update_description,
+            'description_detail' => $update_description_detail,
+            'name_1' => $update_name_1,
+            'image_1' => $update_image_1,
+            'description_1' => $update_description_1,
+            'name_2' => $update_name_2,
+            'image_2' => $update_image_2,
+            'description_2' => $update_description_2,
+            'name_3' => $update_name_3,
+            'image_3' => $update_image_3,
+            'description_3' => $update_description_3
+        ]]
         );
-
-        if ($result->getModifiedCount() > 0) {
-            return "Cập nhật combo sản phẩm thành công";
-        } else {
-            return "Lỗi khi cập nhật combo sản phẩm";
-        }
+        return $result->getModifiedCount() > 0 ? 'Cập nhật combo thành công' : 'Cập nhật combo thất bại'; 
     }
     public function adminDeleteComboProducts($delete_id)
-    {
+    {   
         $comboProductsCollection = $this->mongo->combo_products;
-        $result = $comboProductsCollection->deleteOne(['_id' => new MongoDB\BSON\ObjectId($delete_id)]);
-        if ($result->getDeletedCount() > 0) {
-            return 'Xóa combo sách khỏi danh mục thành công!';
-        } else {
-            return 'Combo sách không tìm thấy!';
-        }
+        $result = $comboProductsCollection->deleteOne(['_id' => ($delete_id)]);
+        return $result->getDeletedCount() > 0 ? 'Xóa combo thành công' : 'Không thể xóa combo';
     }
     public function resetProduct($product_id) {
         return $product_id;
@@ -117,13 +108,13 @@ class AdminModel
                                          $image_3, $name_3, $description_3) 
     {
         // Kiểm tra combo đã tồn tại chưa
-        $existingCombo = $this->db->combo_products->findOne(['combo_name' => $combo_name]);
+        $existingCombo = $this->mongo->combo_products->findOne(['combo_name' => $combo_name]);
         if ($existingCombo) {
             return "Combo sản phẩm đã tồn tại";
         }
 
         // Thêm combo vào MongoDB
-        $result = $this->db->combo_products->insertOne([
+        $result = $this->mongo->combo_products->insertOne([
             'combo_name' => $combo_name,
             'price' => $price,
             'image_combo' => $image_combo,
@@ -225,7 +216,7 @@ class AdminModel
         return $result->getDeletedCount() > 0 ? 'Xóa đơn hàng thành công' : 'Không thể xóa đơn hàng';
     }
 
-    //adminUpdateProfileCTR
+    //adminUpdateProfileCTRL
     public function adminUpdateProfile($fullname, $username, $email, $phonenumber, $oldpass, $newpass, $confirmpass) {
         // Kiểm tra nếu email hoặc username đã tồn tại
         $sql = "SELECT * FROM users WHERE (email = ? OR username = ?) AND id != ?";
