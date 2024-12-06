@@ -1,18 +1,22 @@
 <?php
-// Validate and sanitize cookie data
-$user_id = isset($_COOKIE['user_id']) ? filter_var($_COOKIE['user_id'], FILTER_SANITIZE_STRING) : '';
+require 'vendor/autoload.php'; // Include MongoDB library
 
-// Validate user ID from the database using a prepared statement
-$query_check_id = "SELECT * FROM [users] WHERE user_id = ?";
-$params_check_id = [$user_id];
-$stmt_check_id = sqlsrv_query($conn, $query_check_id, $params_check_id);
+// Connect to MongoDB
+$client = new MongoDB\Client("mongodb://localhost:27017");
+$database = $client->selectDatabase('bookstore');
+$usersCollection = $database->users;
+$cartCollection = $database->cart;
 
-if ($stmt_check_id === false || sqlsrv_fetch($stmt_check_id) === false) {
+// Retrieve the user ID from cookies
+$user_id = $_COOKIE['user_id'] ?? '';
+
+// Check if the user exists
+$user = $usersCollection->findOne(['user_id' => $user_id]);
+
+if (!$user) {
     $user_id = '';
 }
-sqlsrv_free_stmt($stmt_check_id);
 ?>
-
 
 <!-- header section starts  -->
 <header class="header">
@@ -36,23 +40,16 @@ sqlsrv_free_stmt($stmt_check_id);
     <a data-aos="zoom-in-left" data-aos-delay="1250" class ="tcn">
         <i id="fa-user" class="fas fa-user users"></i>
           <div id="profile-box" class="profile">
-          <?php
-                $query_profile = "SELECT * FROM [users] WHERE user_id = ?";
-                $params_profile = [$user_id];
-                $stmt_profile = sqlsrv_query($conn, $query_profile, $params_profile);
-
-                if ($stmt_profile && sqlsrv_has_rows($stmt_profile)) {
-                    $fetch_profile = sqlsrv_fetch_array($stmt_profile, SQLSRV_FETCH_ASSOC);
-          ?>
-            <?php if(!empty($fetch_profile['image'])){ ?>
-              <img src="../../public/images/<?= htmlspecialchars($fetch_profile['image']); ?>" alt="" class="image">
-            <?php $margin_top = '35rem';  ?>
-            <?php } else { ?>
-                <?php $margin_top = '25rem';?>
-            <?php } ?>
-              <p><?= htmlspecialchars($fetch_profile['username']); ?></p>
-              <a href="update_profile.php" class="btn">Cập nhập thông tin</a>
-              <a href="../View/logout.php" class="delete-btn" onclick="return confirm('logout from this website?');">Đăng xuất</a>
+            <?php if ($user) { ?>
+                <?php if (!empty($user['image'])) { ?>
+                    <img src="../../public/images/<?= $user['image']; ?>" alt="" class="image">
+                    <?php $margin_top = '35rem'; ?>
+                <?php } else { ?>
+                    <?php $margin_top = '25rem'; ?>
+                <?php } ?>
+                <p><?= $user['username']; ?></p>
+                <a href="update_profile.php" class="btn">Cập nhập thông tin</a>
+                <a href="../View/logout.php" class="delete-btn" onclick="return confirm('logout from this website?');">Đăng xuất</a>
             <?php } ?>
           </div>
         <div id="dropdown-box" class="dropdown-content">
@@ -61,24 +58,13 @@ sqlsrv_free_stmt($stmt_check_id);
         </div>
     </a>
     <?php
-      // Query to get the cart item count
-      $query_cart = "SELECT COUNT(*) AS cart_count FROM [cart] WHERE user_id = ?";
-        $params_cart = [$user_id];
-        $stmt_cart = sqlsrv_query($conn, $query_cart, $params_cart);
-
-        $cart_rows_number = 0;
-        if ($stmt_cart && sqlsrv_fetch($stmt_cart)) {
-            $cart_data = sqlsrv_get_field($stmt_cart, 0);
-            $cart_rows_number = $cart_data ? $cart_data : 0;
-        }
-        sqlsrv_free_stmt($stmt_cart);
-        ?>
-    <a data-aos="zoom-in-left" data-aos-delay="1400" href="shopping_cart.php" class="shopping-icon">
-            <i class="fas fa-shopping-bag"></i>
-          <?php if($cart_rows_number > 0){ ?>
-            <span class="badge"><?php echo $cart_rows_number; ?></span> 
+      $cartCount = $cartCollection->countDocuments(['user_id' => $user_id]);
+      ?>
+      <a data-aos="zoom-in-left" data-aos-delay="1400" href="shopping_cart.php" class="shopping-icon">
+          <i class="fas fa-shopping-bag"></i>
+          <?php if ($cartCount > 0) { ?>
+              <span class="badge"><?= $cartCount; ?></span> 
           <?php } ?>
-          
     </a>
     </div>
 <script>

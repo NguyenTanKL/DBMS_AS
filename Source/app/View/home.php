@@ -1,6 +1,10 @@
 <?php
-include '../../config/config.php';
+require '../../vendor/autoload.php'; // Include Composer autoloader for MongoDB Client
 session_start();
+
+// Connect to MongoDB
+$client = new MongoDB\Client("mongodb://localhost:27017");
+$database = $client->bookstore; // Replace 'bookstore' with your actual database name
 ?>
 
 <!DOCTYPE html>
@@ -73,51 +77,38 @@ session_start();
         <span> Hãy chọn quyển sách yêu thích của bạn</span>
     </div>
     <div class="box-container">
-    <?php  
-         // Query to fetch the latest 8 products
-        $query = "SELECT TOP 8 * FROM products ORDER BY date DESC";
-        $stmt = sqlsrv_query($conn, $query);
-
-        // Check if query execution was successful
-        if ($stmt === false) {
-            die(print_r(sqlsrv_errors(), true));
-        }
-
-        // Check if there are rows returned
-        if (sqlsrv_has_rows($stmt)) {
-            while ($fetch_products = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    ?>
-                <form method="post" action="../Controllers/cartController.php"> 
-                    <div class="box" data-aos="fade-up" data-aos-delay="300">
-                        <div class="image"> 
-                            <img src="<?php echo htmlspecialchars($fetch_products['image']); ?>" alt="">
-                        </div>
-                        <div class="content">
-                            <h3><?php echo htmlspecialchars($fetch_products['name']); ?></h3>
-                            <a href="detail_book.php?get_id=<?php echo $fetch_products['product_id']; ?>">Xem thêm<i class="fas fa-angle-right"></i></a>
-                        </div>
-                        <div class="purchase">
-                            <h3>
-                                <?php echo htmlspecialchars($fetch_products['price']); ?>
-                                <span class="rate">₫</span></h3>
-                            <input type="hidden" name="product_quantity" value="1">
-                            <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($fetch_products['name']); ?>">
-                            <input type="hidden" name="product_price" value="<?php echo htmlspecialchars($fetch_products['price']); ?>">
-                            <input type="hidden" name="product_image" value="<?php echo htmlspecialchars($fetch_products['image']); ?>">
-                            <button type="submit" name="add_to_cart">
-                                <i class="fas fa-shopping-cart"></i>
-                            </button>
-                        </div>
-                    </div>
-                </form>
-
-      <?php
+        <?php
+            try {
+                $products = $database->products->find([], ['sort' => ['date' => -1], 'limit' => 8]);
+                foreach ($products as $product) {
+                    ?>
+                        <form method="post" action="../Controllers/cartController.php"> 
+                            <div class="box" data-aos="fade-up" data-aos-delay="300">
+                                <div class="image"> 
+                                    <img src="<?php echo $product['image']; ?>" alt="">
+                                </div>
+                                <div class="content">
+                                    <h3><?php echo $product['name']; ?></h3>
+                                    <a href="detail_book.php?get_id=<?php echo $product['_id']; ?>">Xem thêm<i class="fas fa-angle-right"></i></a>
+                                </div>
+                                <div class="purchase">
+                                    <h3><?php echo $product['price']; ?><span class="rate">₫</span></h3>
+                                    <input type="hidden" name="product_quantity" value="1">
+                                    <input type="hidden" name="product_name" value="<?php echo $product['name']; ?>">
+                                    <input type="hidden" name="product_price" value="<?php echo $product['price']; ?>">
+                                    <input type="hidden" name="product_image" value="<?php echo $product['image']; ?>">
+                                    <button type="submit" name="add_to_cart">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    <?php
+                }
+            } catch (Exception $e) {
+                echo '<p class="empty">Error fetching products: ' . $e->getMessage() . '</p>';
             }
-        }else{
-            echo '<p class="empty">no products added yet!</p>';
-        }
-        sqlsrv_free_stmt($stmt);
-      ?>
+        ?>
     </div>
 </section>
 
@@ -126,51 +117,38 @@ session_start();
         <h1>Combo sách hay mới nhất</h1>
     </div>
     <div class="box-container ">
-    <?php  
-         // Query to select the latest 4 combo products
-        $query = "SELECT TOP 4 * FROM combo_products ORDER BY combo_id DESC";
-        $stmt = sqlsrv_query($conn, $query);
-
-        // Check for query execution errors
-        if ($stmt === false) {
-            die(print_r(sqlsrv_errors(), true));
-        }
-
-        // Check if rows are returned
-        if (sqlsrv_has_rows($stmt)) {
-            while ($fetch_combo_products = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) {
-    ?>
-                <form method="post" action="../Controllers/cartController.php"> 
-                    <div class="box combo_box" data-aos="fade-up" data-aos-delay="300">
-                        <div class="image"> 
-                            <img src="<?php echo htmlspecialchars($fetch_combo_products['image_combo']); ?>" alt="">
-                        </div>
-                        <div class="content">
-                            <h3><?php echo htmlspecialchars($fetch_combo_products['combo_name']); ?></h3>
-                            <a href="detail_combo_book.php?get_id=<?php echo $fetch_combo_products['combo_id']; ?>">Xem thêm<i class="fas fa-angle-right"></i></a>
-                        </div>
-                        <div class="purchase">
-                            <h3><?php echo htmlspecialchars($fetch_combo_products['price']); ?>
-                                <span class="rate">₫</span></h3>
-                            <input type="hidden" name="product_quantity" value="1">
-                            <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($fetch_combo_products['combo_name']); ?>">
-                            <input type="hidden" name="product_price" value="<?php echo htmlspecialchars($fetch_combo_products['price']); ?>">
-                            <input type="hidden" name="product_image" value="<?php echo htmlspecialchars($fetch_combo_products['image_combo']); ?>">
-                            <button type="submit" name="add_to_cart">
-                                <i class="fas fa-shopping-cart"></i>
-                            </button>
-                        </div>
-                    </div>
-                </form>
-
-
-      <?php
+        <?php
+            try {
+                $comboProducts = $database->combo_products->find([], ['sort' => ['combo_id' => -1], 'limit' => 4]);
+                foreach ($comboProducts as $comboProduct) {
+                    ?>
+                        <form method="post" action="../Controllers/cartController.php"> 
+                            <div class="box combo_box" data-aos="fade-up" data-aos-delay="300">
+                                <div class="image"> 
+                                    <img src="<?php echo $comboProduct['image_combo']; ?>" alt="">
+                                </div>
+                                <div class="content">
+                                    <h3><?php echo $comboProduct['combo_name']; ?></h3>
+                                    <a href="detail_combo_book.php?get_id=<?php echo $comboProduct['_id']; ?>">Xem thêm<i class="fas fa-angle-right"></i></a>
+                                </div>
+                                <div class="purchase">
+                                    <h3><?php echo $comboProduct['price']; ?><span class="rate">₫</span></h3>
+                                    <input type="hidden" name="product_quantity" value="1">
+                                    <input type="hidden" name="product_name" value="<?php echo $comboProduct['combo_name']; ?>">
+                                    <input type="hidden" name="product_price" value="<?php echo $comboProduct['price']; ?>">
+                                    <input type="hidden" name="product_image" value="<?php echo $comboProduct['image_combo']; ?>">
+                                    <button type="submit" name="add_to_cart">
+                                        <i class="fas fa-shopping-cart"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    <?php
+                }
+            } catch (Exception $e) {
+                echo '<p class="empty">Error fetching combo products: ' . $e->getMessage() . '</p>';
             }
-        }else{
-            echo '<p class="empty">no products added yet!</p>';
-        }
-        sqlsrv_free_stmt($stmt);
-      ?>
+        ?>
     </div>
   
    
@@ -191,64 +169,25 @@ session_start();
 
     <div class="box-container" data-aos="fade-left" data-aos-delay="600">
         <?php
-            // Query to fetch the first 4 authors
-            $query1 = "SELECT TOP 4 * FROM authors";
-            $stmt1 = sqlsrv_query($conn, $query1);
-
-            if ($stmt1 === false) {
-                die(print_r(sqlsrv_errors(), true));
+            try {
+                $authors = $database->authors->find([], ['limit' => 4]);
+                foreach ($authors as $author) {
+                    ?>
+                        <div class="box">
+                            <p><?php echo $author['slogan']; ?></p>
+                            <div class="user">
+                                <img src="<?php echo $author['image']; ?>" alt="">
+                                <div class="info">
+                                    <h3><?php echo $author['name']; ?></h3>
+                                    <a href="<?php echo $author['information']; ?>">Thông tin tác giả</a>
+                                </div>
+                            </div>
+                        </div>
+                    <?php
+                }
+            } catch (Exception $e) {
+                echo '<p class="empty">Error fetching authors: ' . $e->getMessage() . '</p>';
             }
-
-            while ($authors = sqlsrv_fetch_array($stmt1, SQLSRV_FETCH_ASSOC)) {
-        ?>
-        <div class="box">
-            <p><?php echo htmlspecialchars($authors['slogan']); ?></p>
-            <div class="user">
-                <img src="<?php echo htmlspecialchars($authors['image']); ?>" alt="">
-                <div class="info">
-                    <h3><?php echo htmlspecialchars($authors['name']); ?></h3>
-                    <a href="<?php echo htmlspecialchars($authors['information']); ?>">Thông tin tác giả</a>
-                </div>
-            </div>
-        </div>
-        <?php
-            }
-            sqlsrv_free_stmt($stmt1);
-        ?>
-    </div>
-    
-    <div class="box-containers" data-aos="fade-left" data-aos-delay="600">
-        <?php
-            // Query to fetch authors after the first 4
-            $query2 = "
-                SELECT * 
-                FROM authors 
-                WHERE id NOT IN (
-                    SELECT TOP 4 id FROM authors ORDER BY id
-                )
-                ORDER BY id
-            ";
-            $stmt2 = sqlsrv_query($conn, $query2);
-
-            if ($stmt2 === false) {
-                die(print_r(sqlsrv_errors(), true));
-            }
-
-            while ($authors = sqlsrv_fetch_array($stmt2, SQLSRV_FETCH_ASSOC)) {
-        ?>
-        <div class="box">
-            <p><?php echo htmlspecialchars($authors['slogan']); ?></p>
-            <div class="user">
-                <img src="<?php echo htmlspecialchars($authors['image']); ?>" alt="">
-                <div class="info">
-                    <h3><?php echo htmlspecialchars($authors['name']); ?></h3>
-                    <a href="<?php echo htmlspecialchars($authors['information']); ?>">Thông tin tác giả</a>
-                </div>
-            </div>
-        </div>
-        <?php
-            }
-            sqlsrv_free_stmt($stmt2);
         ?>
     </div>
     

@@ -1,6 +1,31 @@
 <?php
+require 'vendor/autoload.php'; // Include MongoDB library
 include '../../config/config.php';
 session_start();
+
+// Connect to MongoDB
+$client = new MongoDB\Client("mongodb://localhost:27017");
+$database = $client->selectDatabase('bookstore');
+$comboProductsCollection = $database->combo_products;
+
+// Pagination setup
+$per_page = 8;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$start = ($page - 1) * $per_page;
+
+// Total products and pages calculation
+$total_products = $comboProductsCollection->countDocuments();
+$total_pages = ceil($total_products / $per_page);
+
+// Fetch combo products for the current page
+$comboProducts = $comboProductsCollection->find(
+    [],
+    [
+        'sort' => ['date' => 1],
+        'limit' => $per_page,
+        'skip' => $start
+    ]
+);
 ?>
 
 <!DOCTYPE html>
@@ -47,109 +72,61 @@ session_start();
 
     <!-- products section starts  -->
 
-<section class="product combo_product" id="product" data-aos="fade-up" data-aos-delay="500">
+    <section class="product combo_product" id="product" data-aos="fade-up" data-aos-delay="500">
         <div class="box-container ">
             <?php
-             $per_page = 8;
-             $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-             $offset = ($page - 1) * $per_page;
-     
-             // Query to get the total number of combo products
-             $query_total = "SELECT COUNT(*) AS total FROM combo_products";
-             $stmt_total = sqlsrv_query($conn, $query_total);
-     
-             if ($stmt_total === false) {
-                 die(print_r(sqlsrv_errors(), true));
-             }
-     
-             $row_total = sqlsrv_fetch_array($stmt_total, SQLSRV_FETCH_ASSOC);
-             $total_products = $row_total['total'];
-             $total_pages = ceil($total_products / $per_page);
-     
-             sqlsrv_free_stmt($stmt_total);
-     
-             // Query to fetch combo products for the current page
-             $query_products = "
-                 SELECT * FROM combo_products 
-                 ORDER BY date ASC 
-                 OFFSET ? ROWS 
-                 FETCH NEXT ? ROWS ONLY";
-             $params = [$offset, $per_page];
-             $stmt_products = sqlsrv_query($conn, $query_products, $params);
-     
-             if ($stmt_products === false) {
-                 die(print_r(sqlsrv_errors(), true));
-             }
-             if (sqlsrv_has_rows($stmt_products)) {
-                while ($fetch_combo_products = sqlsrv_fetch_array($stmt_products, SQLSRV_FETCH_ASSOC)) {
+            if ($comboProducts->toArray()) {
+                foreach ($comboProducts as $product) {
             ?>
                     <form method="post" action="../Controllers/cartController.php">
                         <div class="box combo_box" data-aos="fade-up" data-aos-delay="300">
                             <div class="image">
-                                <img src="<?php echo htmlspecialchars($fetch_combo_products['image_combo']); ?>" alt="">
+                                <img src="<?= $product['image_combo']; ?>" alt="">
                             </div>
                             <div class="content">
-                                <h3><?php echo htmlspecialchars($fetch_combo_products['combo_name']); ?></h3>
-                                <a href="detail_combo_book.php?get_id=<?php echo $fetch_combo_products['combo_id']; ?>">Xem thêm<i class="fas fa-angle-right"></i></a>
+                                <h3><?= $product['combo_name']; ?></h3>
+                                <a href="detail_combo_book.php?get_id=<?= $product['_id']; ?>">Xem thêm<i class="fas fa-angle-right"></i></a>
                             </div>
                             <div class="purchase">
-                                <h3><?php echo htmlspecialchars($fetch_combo_products['price']); ?>
+                                <h3><?= $product['price']; ?>
                                     <span class="rate">₫</span>
                                 </h3>
                                 <input type="hidden" name="product_quantity" value="1">
-                                <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($fetch_combo_products['combo_name']); ?>">
-                                <input type="hidden" name="product_price" value="<?php echo htmlspecialchars($fetch_combo_products['price']); ?>">
-                                <input type="hidden" name="product_image" value="<?php echo htmlspecialchars($fetch_combo_products['image_combo']); ?>">
-                                <input type="hidden" name="current_page" value="<?php echo $page; ?>">
+                                <input type="hidden" name="product_name" value="<?= $product['combo_name']; ?>">
+                                <input type="hidden" name="product_price" value="<?= $product['price']; ?>">
+                                <input type="hidden" name="product_image" value="<?= $product['image_combo']; ?>">
+                                <input type="hidden" name="current_page" value="<?= $page; ?>">
                                 <button type="submit" name="add_to_cart">
                                     <i class="fas fa-shopping-cart"></i>
                                 </button>
                             </div>
                         </div>
                     </form>
-
-                    <?php
-                        }
-                    } else {
-                        echo '<p class="empty">No products added yet!</p>';
-                    }
-                        sqlsrv_free_stmt($stmt_products)
+            <?php
+                }
+            } else {
+                echo '<p class="empty">No products added yet!</p>';
+            }
             ?>
-        <!-- Pagination -->
-        <nav aria-label="Page navigation example" class="toolbar">
-            <ul class="pagination justify-content-center d-flex flex-wrap">
-                <li class="page-item <?php echo ($page <= 1) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="?page=<?php echo $page - 1; ?>" tabindex="-1">Previous</a>
-                </li>
-                <?php
-                $start_page = ($page <= 3) ? 1 : $page - 2;
-                $end_page = ($total_pages - $page >= 2) ? $page + 2 : $total_pages;
+            <nav aria-label="Page navigation example" class="toolbar">
+                        <ul class="pagination justify-content-center d-flex flex-wrap">
+                            <li class="page-item <?= ($page <= 1) ? 'disabled' : ''; ?>">
+                                <a class="page-link" href="?page=<?= $page - 1; ?>" tabindex="-1">Previous</a>
+                            </li>
+                            <?php
+                                for ($i = 1; $i <= $total_pages; $i++) {
+                                    echo '<li class="page-item ' . (($i == $page) ? 'active' : '') . '"><a class="page-link" href="?page=' . $i . '">' . $i . '</a></li>';
+                                }
+                            ?>
+                            <li class="page-item <?= ($page >= $total_pages) ? 'disabled' : ''; ?>">
+                                <a class="page-link" href="?page=<?= $page + 1; ?>">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+        </div>
 
-                if ($start_page > 1) {
-                    echo '<li class="page-item"><a class="page-link" href="?page=1">1</a></li>';
-                    if ($start_page > 2) {
-                        echo '<li class="page-item disabled"><a class="page-link">...</a></li>';
-                    }
-                }
 
-                for ($i = $start_page; $i <= $end_page; $i++) {
-                    echo '<li class="page-item ' . (($i == $page) ? 'active' : '') . '"><a class="page-link" href="?page=' . $i . '">' . $i . '</a></li>';
-                }
-
-                if ($end_page < $total_pages) {
-                    if ($end_page < $total_pages - 1) {
-                        echo '<li class="page-item disabled"><a class="page-link">...</a></li>';
-                    }
-                    echo '<li class="page-item"><a class="page-link" href="?page=' . $total_pages . '">' . $total_pages . '</a></li>';
-                }
-                ?>
-                <li class="page-item <?php echo ($page >= $total_pages) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="?page=<?php echo $page + 1; ?>">Next</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-</section>
+    </section>
 
 
     <?php include 'footer.php'; ?>

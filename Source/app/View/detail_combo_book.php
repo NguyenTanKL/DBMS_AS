@@ -2,47 +2,32 @@
 include '../../config/config.php';
 session_start();
 
-if (isset($_GET['get_id'])) {
-    $get_id = filter_var($_GET['get_id'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
-} else {
-    $get_id = '';
-    header('Location: home.php');
-    exit();
+// Connect to MongoDB
+$client = new MongoDB\Client("mongodb://localhost:27017");
+$database = $client->selectDatabase('bookstore');  // Select the "bookstore" database
+$comboCollection = $database->combo_products;  // "combo_products" collection
+$reviewCollection = $database->reviews;  // "reviews" collection
+$userCollection = $database->users;  // "users" collection
+
+// Get combo_id from the URL (GET method)
+$get_id = isset($_GET['get_id']) ? $_GET['get_id'] : '';
+if (empty($get_id)) {
+    header('location:home.php');
+    exit;
 }
 
+// Deleting a review
 if (isset($_POST['delete_review'])) {
     $delete_id = filter_var($_POST['delete_id'], FILTER_SANITIZE_FULL_SPECIAL_CHARS);
 
-    // Verify the review exists
-    $verify_query = "SELECT * FROM reviews WHERE id = ?";
-    $verify_stmt = sqlsrv_prepare($conn, $verify_query, [$delete_id]);
-
-    if ($verify_stmt === false) {
-        die(print_r(sqlsrv_errors(), true));
-    }
-
-    if (sqlsrv_execute($verify_stmt) && sqlsrv_fetch($verify_stmt)) {
+    // Verify if the review exists
+    $review = $reviewCollection->findOne(['_id' => new MongoDB\BSON\ObjectId($delete_id)]);
+    if ($review) {
         // Delete the review
-        $delete_query = "DELETE FROM reviews WHERE id = ?";
-        $delete_stmt = sqlsrv_prepare($conn, $delete_query, [$delete_id]);
-
-        if ($delete_stmt === false) {
-            die(print_r(sqlsrv_errors(), true));
-        }
-
-        if (sqlsrv_execute($delete_stmt)) {
-            $_SESSION['success_msg'] = 'Review deleted!';
-        } else {
-            $_SESSION['error_msg'] = 'Failed to delete the review.';
-        }
+        $reviewCollection->deleteOne(['_id' => new MongoDB\BSON\ObjectId($delete_id)]);
+        $_SESSION['success_msg'] = 'Review deleted!';
     } else {
-        $_SESSION['warning_msg'] = 'Review already deleted or does not exist!';
-    }
-
-    // Free statement resources
-    sqlsrv_free_stmt($verify_stmt);
-    if (isset($delete_stmt)) {
-        sqlsrv_free_stmt($delete_stmt);
+        $_SESSION['warning_msg'] = 'Review already deleted!';
     }
 }
 ?>
@@ -73,67 +58,48 @@ if (isset($_POST['delete_review'])) {
 
     <div class="book-img" data-aos="fade-right" data-aos-delay="300">
         <?php
-            $query = "SELECT * FROM combo_products WHERE combo_id = ?";
-            $params = [$get_id];
-            $select_combo_products = sqlsrv_query($conn, $query, $params);
-    
-            if ($select_combo_products === false) {
-                die(print_r(sqlsrv_errors(), true));
-            }
-    
-            if ($product = sqlsrv_fetch_array($select_combo_products, SQLSRV_FETCH_ASSOC)) {
-        ?>
-        <div class="box">
-            <div class="image">
-                 <img src="<?php echo htmlspecialchars($product['image_combo'], ENT_QUOTES, 'UTF-8'); ?>" alt="">
-            </div>
-        </div>
-        <?php
+            $product = $comboCollection->findOne(['combo_id' => $get_id]);
+            if ($product) {
+            ?>
+                <div class="box">
+                    <div class="image">
+                        <img src="<?php echo $product['image_combo']; ?>" alt="">
+                    </div>
+                </div>
+            <?php
             } else {
                 echo '<p class="empty">No products added yet!</p>';
             }
-            sqlsrv_free_stmt($select_combo_products);
         ?>
     </div>
+
     <div class="information-detail" data-aos="fade-left" data-aos-delay="600">
-        <h3><?php echo htmlspecialchars($product['combo_name'], ENT_QUOTES, 'UTF-8'); ?></h3>
-        <p><?php echo htmlspecialchars($product['description'], ENT_QUOTES, 'UTF-8'); ?></p>
-    <div class="evaluate-average">
-    <?php
-        $average = 0;
-        $total_ratings = 0;
+        <h3><?php echo $product['combo_name']; ?></h3>
+        <p><?php echo $product['description']; ?></p>
+        
+        <div class="evaluate-average">
+            <?php
+                $total_ratings = 0;
+                $total_reviews = 0;
+                $reviews = $reviewCollection->find(['combo_id' => $get_id]);
 
-        $query = "SELECT rating FROM reviews WHERE combo_id = ?";
-        $params = [$get_id];
-        $select_ratings = sqlsrv_query($conn, $query, $params);
+                foreach ($reviews as $review) {
+                    $total_ratings += $review['rating'];
+                    $total_reviews++;
+                }
 
-        if ($select_ratings === false) {
-            die(print_r(sqlsrv_errors(), true));
-        }
-
-        $total_reviews = 0;
-        while ($fetch_rating = sqlsrv_fetch_array($select_ratings, SQLSRV_FETCH_ASSOC)) {
-            $total_ratings += $fetch_rating['rating'];
-            $total_reviews++;
-        }
-
-        if ($total_reviews != 0) {
-            $average = round($total_ratings / $total_reviews, 1);
-            $decimal_part = fmod($total_ratings / $total_reviews, 1);
-        }
-        ?>
-        <h3>
-            <?php 
-            for ($i = 1; $i <= floor($average); $i++) {
-                echo '<i class="fas fa-star"></i>';
-            }
-            if ($total_reviews > 0 && $decimal_part > 0) {
-                echo '<i class="fas fa-star-half-alt"></i>';
-            }
+                $average = $total_reviews ? round($total_ratings / $total_reviews, 1) : 0;
             ?>
-        </h3>
-        <p><?= $total_reviews; ?> đánh giá</p>
-    </div>
+
+            <h3>
+                <?php
+                for ($i = 1; $i <= $average; $i++) {
+                    echo '<i class="fas fa-star"></i>';
+                }
+                ?>
+            </h3>
+            <p><?php echo $total_reviews; ?> đánh giá</p>
+        </div>
     
 
     
@@ -154,9 +120,9 @@ if (isset($_POST['delete_review'])) {
         <button type="button" class="plus-btn cart-btn" onClick="increase()">+</button>
     </div>
         <div>
-            <input type="hidden" name="product_name" value="<?php echo htmlspecialchars($product['combo_name'], ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="hidden" name="product_name" value="<?php echo $product['combo_name']; ?>">
             <input type="hidden" name="product_price" value="<?php echo $product['price']?>">
-            <input type="hidden" name="product_image" value="<?php echo htmlspecialchars($product['image_combo'], ENT_QUOTES, 'UTF-8'); ?>">
+            <input type="hidden" name="product_image" value="<?php echo $product['image_combo']; ?>">
         </div>
         <div class="option-cart">
             <div class="add_to_cart combo">
@@ -172,64 +138,24 @@ if (isset($_POST['delete_review'])) {
 <section class="descriptionBook" data-aos="zoom-in-up" data-aos-delay="300">
     <div class="heading combo">
         <h1>Mô tả sản phẩm</h1>
-
-        <?php
-        // Fetch product details using MS SQL
-        if (isset($_GET['get_id'])) {
-            $get_id = $_GET['get_id'];
-
-            // MS SQL Query
-            $query = "SELECT * FROM combo_products WHERE combo_id = ?";
-            $params = array($get_id);
-            $stmt = sqlsrv_query($conn, $query, $params);
-
-            if ($stmt === false) {
-                die(print_r(sqlsrv_errors(), true));
-            }
-
-            if (sqlsrv_has_rows($stmt)) {
-                $product = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC);
-            } else {
-                echo '<p class="empty">No product found!</p>';
-                exit;
-            }
-        } else {
-            echo '<p class="empty">Invalid product ID!</p>';
-            exit;
-        }
-        ?>
-
         <p><?php echo $product['combo_name']?></p>
         <div class="description"><?php echo nl2br($product['description_detail'])?></div>
-
         <div class="book">
-        <?php if (!empty($product['name_1'])) : ?>
-                <p>1. <?php echo $product['name_1']; ?></p>
-                <div class="description"><?php echo nl2br($product['description_1']); ?></div>
-                <?php if (!empty($product['image_1'])) : ?>
-                    <img src="<?php echo $product['image_1']; ?>" alt="">
-                <?php endif; ?>
-            <?php endif; ?>
-        </div>
+            <?php 
+                for ($i = 1; $i <= 3; $i++) {
+                    $name_key = 'name_' . $i;
+                    $desc_key = 'description_' . $i;
+                    $image_key = 'image_' . $i;
 
-        <div class="book">
-        <?php if (!empty($product['name_2'])) : ?>
-                <p>2. <?php echo $product['name_2']; ?></p>
-                <div class="description"><?php echo nl2br($product['description_2']); ?></div>
-                <?php if (!empty($product['image_2'])) : ?>
-                    <img src="<?php echo $product['image_2']; ?>" alt="">
-                <?php endif; ?>
-            <?php endif; ?>
-        </div>
-
-        <div class="book">
-        <?php if (!empty($product['name_3'])) : ?>
-                <p>3. <?php echo $product['name_3']; ?></p>
-                <div class="description"><?php echo nl2br($product['description_3']); ?></div>
-                <?php if (!empty($product['image_3'])) : ?>
-                    <img src="<?php echo $product['image_3']; ?>" alt="">
-                <?php endif; ?>
-            <?php endif; ?>
+                    if ($product[$name_key]) {
+                        echo "<p>$i. {$product[$name_key]}</p>";
+                        echo "<div class='description'>" . nl2br($product[$desc_key]) . "</div>";
+                        if ($product[$image_key]) {
+                            echo "<img src='{$product[$image_key]}' alt=''>";
+                        }
+                    }
+                }
+            ?>
         </div>
         <!-- <button class="btn-toggle">Xem thêm</button> --> 
 </section>
@@ -241,74 +167,50 @@ if (isset($_POST['delete_review'])) {
 
    <div class="heading">
     <h1>Đánh giá sản phẩm</h1> 
-    <a href="add_review.php?get_id=<?= htmlspecialchars($get_id); ?>" class="add-btn">Thêm đánh giá</a>
+    <a href="add_review.php?get_id=<?= $get_id; ?>" class="add-btn">Thêm đánh giá</a>
     </div>
     <div class="box-review">
     <div class="view-post">
     <?php
-        if (isset($get_id)) {
-            // Fetch product details using MS SQL
-            $query_products = "SELECT * FROM combo_products WHERE combo_id = ?";
-            $params_products = array($get_id);
-            $stmt_products = sqlsrv_query($conn, $query_products, $params_products);
+        $product = $comboCollection->findOne(['combo_id' => $get_id]);
+        if ($product) {
+            $total_ratings = 0;
+            $rating_1 = 0;
+            $rating_2 = 0;
+            $rating_3 = 0;
+            $rating_4 = 0;
+            $rating_5 = 0;
 
-            if ($stmt_products === false) {
-                die(print_r(sqlsrv_errors(), true));
+            $reviews = $reviewCollection->find(['combo_id' => $get_id]);
+            $total_reviews = $reviews->isDead() ? 0 : iterator_count($reviews);
+
+            foreach ($reviews as $review) {
+                $total_ratings += $review['rating'];
+                if ($review['rating'] == 1) {
+                    $rating_1 += $review['rating'];
+                }
+                if ($review['rating'] == 2) {
+                    $rating_2 += $review['rating'];
+                }
+                if ($review['rating'] == 3) {
+                    $rating_3 += $review['rating'];
+                }
+                if ($review['rating'] == 4) {
+                    $rating_4 += $review['rating'];
+                }
+                if ($review['rating'] == 5) {
+                    $rating_5 += $review['rating'];
+                }
             }
 
-            if (sqlsrv_has_rows($stmt_products)) {
-                while ($fetch_products = sqlsrv_fetch_array($stmt_products, SQLSRV_FETCH_ASSOC)) {
-                    // Initialize rating counters
-                    $total_ratings = 0;
-                    $rating_1 = 0;
-                    $rating_2 = 0;
-                    $rating_3 = 0;
-                    $rating_4 = 0;
-                    $rating_5 = 0;
-
-                    // Fetch reviews for the product
-                    $query_ratings = "SELECT * FROM reviews WHERE combo_id = ?";
-                    $params_ratings = array($get_id);
-                    $stmt_ratings = sqlsrv_query($conn, $query_ratings, $params_ratings);
-
-                    if ($stmt_ratings === false) {
-                        die(print_r(sqlsrv_errors(), true));
-                    }
-
-                    $total_reviews = 0;
-                    while ($fetch_rating = sqlsrv_fetch_array($stmt_ratings, SQLSRV_FETCH_ASSOC)) {
-                        $total_reviews++;
-                        $total_ratings += $fetch_rating['rating'];
-
-                        // Count ratings by stars
-                        switch ($fetch_rating['rating']) {
-                            case 1:
-                                $rating_1++;
-                                break;
-                            case 2:
-                                $rating_2++;
-                                break;
-                            case 3:
-                                $rating_3++;
-                                break;
-                            case 4:
-                                $rating_4++;
-                                break;
-                            case 5:
-                                $rating_5++;
-                                break;
-                        }
-                    }
-
-                    // Calculate average rating
-                    $average = ($total_reviews > 0) ? round($total_ratings / $total_reviews, 1) : 0;
+            $average = $total_reviews ? round($total_ratings / $total_reviews, 1) : 0;
         ?>
         <div class="row">
             <div class="col">
                 <div class="flex">
                     <div class="total-reviews">
                         <h3><?= $average; ?><i class="fas fa-star"></i></h3>
-                        <p>(<?= $total_reivews; ?> đánh giá)</p>
+                        <p>(<?= $total_reviews; ?> đánh giá)</p>
                     </div>
                     <div class="total-ratings">
                         <p>
@@ -345,88 +247,60 @@ if (isset($_POST['delete_review'])) {
                 </div>
             </div>
         </div>
-   <?php
-         }
-      }else{
-         echo '<p class="empty">post is missing!</p>';
-      }
-    } else {
-        echo '<p class="empty">Invalid product ID!</p>';
-    }
-   ?>
+        <?php
+        } else {
+            echo '<p class="empty">post is missing!</p>';
+        }
+        ?>
 
         </div>
    
    <div class="box-container">
    <?php
-    if (isset($get_id)) {
-        // Fetch reviews
-        $query_reviews = "SELECT * FROM reviews WHERE combo_id = ?";
-        $params_reviews = array($get_id);
-        $stmt_reviews = sqlsrv_query($conn, $query_reviews, $params_reviews);
+            $reviews = $reviewCollection->find(['combo_id' => $get_id]);
+            if ($reviews->isDead()) {
+                echo '<p class="empty">Chưa có đánh giá!</p>';
+            }
 
-        if ($stmt_reviews === false) {
-            die(print_r(sqlsrv_errors(), true));
-        }
-
-        if (sqlsrv_has_rows($stmt_reviews)) {
-            while ($fetch_review = sqlsrv_fetch_array($stmt_reviews, SQLSRV_FETCH_ASSOC)) {
-                ?>
-                <div class="box" <?php if ($fetch_review['user_id'] == $user_id) { echo 'style="order: -1;"'; } ?>>
-                    <?php
-                    // Fetch user details
-                    $query_user = "SELECT * FROM users WHERE user_id = ?";
-                    $params_user = array($fetch_review['user_id']);
-                    $stmt_user = sqlsrv_query($conn, $query_user, $params_user);
-
-                    if ($stmt_user === false) {
-                        die(print_r(sqlsrv_errors(), true));
-                    }
-
-                    while ($fetch_user = sqlsrv_fetch_array($stmt_user, SQLSRV_FETCH_ASSOC)) {
-                        ?>
+            foreach ($reviews as $fetch_review) {
+                $user = $userCollection->findOne(['user_id' => $fetch_review['user_id']]);
+                if ($user) {
+            ?>
+                    <div class="box">
                         <div class="user">
-                            <?php if (!empty($fetch_user['image'])) { ?>
-                                <img src="../../public/images/<?= htmlspecialchars($fetch_user['image']); ?>" alt="">
+                            <?php if ($user['image']) { ?>
+                                <img src="../../public/images/<?= $user['image']; ?>" alt="">
                             <?php } else { ?>
-                                <h3><?= htmlspecialchars(substr($fetch_user['username'], 0, 1)); ?></h3>
+                                <h3><?= substr($user['username'], 0, 1); ?></h3>
                             <?php } ?>
                             <div>
-                                <p><?= htmlspecialchars($fetch_user['username']); ?></p>
-                                <span><?= htmlspecialchars($fetch_review['date']->format('Y-m-d')); ?></span>
+                                <p><?= $user['username']; ?></p>
+                                <span><?= $fetch_review['date']; ?></span>
                             </div>
                         </div>
-                        <?php
-                    }
-                    ?>
-      <div class="ratings">
-                        <p>
-                            <?php for ($i = 0; $i < $fetch_review['rating']; $i++) { ?>
-                                <i class="fas fa-star"></i>
-                            <?php } ?>
-                        </p>
+                        <div class="ratings">
+                            <?php
+                            for ($i = 0; $i < $fetch_review['rating']; $i++) {
+                                echo '<i class="fas fa-star"></i>';
+                            }
+                            ?>
+                        </div>
+                        <h3 class="title"><?= $fetch_review['title']; ?></h3>
+                        <?php if ($fetch_review['description']) { ?>
+                            <p class="description"><?= $fetch_review['description']; ?></p>
+                        <?php } ?>
+
+                        <?php if ($fetch_review['user_id'] == $user_id) { ?>
+                            <form action="" method="post" class="flex-btn">
+                                <input type="hidden" name="delete_id" value="<?= $fetch_review['_id']; ?>">
+                                <input type="submit" value="Delete" class="btn" name="delete_review" onclick="return confirm('Delete this review?');">
+                            </form>
+                        <?php } ?>
                     </div>
-                    <h3 class="title"><?= htmlspecialchars($fetch_review['title']); ?></h3>
-                    <?php if (!empty($fetch_review['description'])) { ?>
-                        <p class="description"><?= nl2br(htmlspecialchars($fetch_review['description'])); ?></p>
-                    <?php } ?>
-                    <?php if ($fetch_review['user_id'] == $user_id) { ?>
-                        <form action="" method="post" class="flex-btn">
-                            <input type="hidden" name="delete_id" value="<?= htmlspecialchars($fetch_review['id']); ?>">
-                            <a href="update_review.php?get_id=<?= htmlspecialchars($fetch_review['id']); ?>" class="update">Chỉnh sửa</a>
-                            <input type="submit" value="Xóa" class="delete-review" name="delete_review">
-                        </form>
-                    <?php } ?>
-                </div>
-                <?php
+            <?php
+                }
             }
-        } else {
-            echo '<p class="empty">Chưa có đánh giá!</p>';
-        }
-    } else {
-        echo '<p class="empty">Invalid product ID!</p>';
-    }
-    ?>
+            ?>
 
    </div>
 
