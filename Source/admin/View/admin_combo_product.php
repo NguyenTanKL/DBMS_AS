@@ -1,8 +1,20 @@
 <?php
+require '../../vendor/autoload.php';
 include '../../config/config.php';
+use MongoDB\Client;
+
+// Kết nối với MongoDB
+try {
+    $client = new Client("mongodb://localhost:27017");
+    $db = $client->database_bookstore; // Tên database MongoDB
+    $collection = $db->combo_products; // Tên collection MongoDB
+} catch (Exception $e) {
+    die("Kết nối MongoDB thất bại: " . $e->getMessage());
+}
+
 session_start();
-?>
-<?php
+
+// Function to truncate text
 function truncate_text($text)
 {
     if (strlen($text) > 70) {
@@ -12,9 +24,10 @@ function truncate_text($text)
     return $text;
 }
 ?>
+
+
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -166,332 +179,236 @@ function truncate_text($text)
     </style>
     <link rel="stylesheet" href="../../public/css/admin.css">
 </head>
-
 <body>
     <?php include 'admin_header.php'; ?>
-    <section class="add-products-combo">
+        <section class="add-products-combo">
+            <?php
+            if (isset($_GET['add-product-book'])) {
+            ?>
+            <form action="../Controllers/adminProductController.php" method="post">
+                <h3>Thêm combo</h3>
+                <input type="text" name="combo_name" class="box" placeholder="Nhập tên Combo" required>
+                <input type="number" min="0" name="price" class="box" placeholder="Nhập giá" required>
+                <input type="text" name="image_combo" class="box" placeholder="Nhập ảnh của combo" required>
+                <textarea name="description" class="description" placeholder="Nhập mô tả về combo" cols="30" rows="5"></textarea>
+                <textarea name="description_detail" class="description" placeholder="Nhập mô tả chi tiết cho combo" cols="30" rows="5"></textarea>
+                <input type="text" name="name_1" class="box" placeholder="Nhập tên sách 1" required>
+                <input type="text" name="image_1" class="box" placeholder="Nhập url cho sách 1" required>
+                <textarea name="description_1" class="description" placeholder="Nhập mô tả về sách 1" cols="30" rows="5"></textarea>
+                <input type="text" name="name_2" class="box" placeholder="Nhập tên sách 2" required>
+                <input type="text" name="image_2" class="box" placeholder="Nhập url cho sách 2" required>
+                <textarea name="description_2" class="description" placeholder="Nhập mô tả về sách 2" cols="30" rows="5"></textarea>
+                <input type="text" name="name_3" class="box" placeholder="Nhập tên sách 3">
+                <input type="text" name="image_3" class="box" placeholder="Nhập url cho sách 3">
+                <textarea name="description_3" class="description" placeholder="Nhập mô tả về sách 3" cols="30" rows="5"></textarea>
+                <div style="display:flex;justify-content:center;gap:0.5rem;">
+                    <input type="submit" value="Thêm Combo" name="add_product_combo" class="btn">
+                    <a href="admin_combo_product.php" class="delete-btn">Đóng</a>
+                </div>
+            </form>
         <?php
-        if (isset($_GET['add-product-book'])) {
-        ?>
-        <form action="../Controllers/adminProductController.php" method="post">
-            <h3>Thêm combo</h3>
-            <input type="text" name="combo_name" class="box" placeholder="Nhập tên Combo" required>
-            <input type="number" min="0" name="price" class="box" placeholder="Nhập giá" required>
-            <input type="text" name="image_combo" class="box" placeholder="Nhập ảnh của combo" required>
-            <textarea name="description" class="description" placeholder="Nhập mô tả về combo" cols="30"
-                rows="5"></textarea>
-            <textarea name="description_detail" class="description" placeholder="Nhập mô tả chi tiết cho combo"
-                cols="30" rows="5"></textarea>
-            <input type="text" name="name_1" class="box" placeholder="Nhập tên sách 1" required>
-            <input type="text" name="image_1" class="box" placeholder="Nhập url cho sách 1" required>
-            <textarea name="description_1" class="description" placeholder="Nhập mô tả về sách 1" cols="30"
-                rows="5"></textarea>
-            <input type="text" name="name_2" class="box" placeholder="Nhập tên sách 2" required>
-            <input type="text" name="image_2" class="box" placeholder="Nhập url cho sách 2" required>
-            <textarea name="description_2" class="description" placeholder="Nhập mô tả về sách 2" cols="30"
-                rows="5"></textarea>
-            <input type="text" name="name_3" class="box" placeholder="Nhập tên sách 3">
-            <input type="text" name="image_3" class="box" placeholder="Nhập url cho sách 3">
-            <textarea name="description_3" class="description" placeholder="Nhập mô tả về sách 3" cols="30"
-                rows="5"></textarea>
-            <div style="display:flex;justify-content:center;gap:0.5rem; ">
-                <input type="submit" value="Thêm Combo" name="add_product_combo" class="btn">
-                <a href="admin_combo_product.php" class="delete-btn">Đóng</a>
-            </div>
-        </form>
-        <?php
-        } else {
-            echo '<script>document.querySelector(".add-products-combo").style.display = "none";</script>';
-        }
-        ?>
-
-
-    </section>
-    <!--  SEARCH PRODUCTs BEGINS -->
-    <form action="" method="post">
-        <div>
-            <div class="blackboard">
-                <div class="form">
-                    <p>
-                        <label for="fullname"><b>Tên&emsp;</b></label>
-                        <input type="text" placeholder="Nhập tên" name="fullname">
-                    </p>
-                    <br>
-                    <p>
-                        <label for="pricebelow">Khoảng giá:</label>&emsp;
-                        <input type="number" placeholder="Dưới" name="pricebelow" style="width:20%">&emsp;&emsp;&emsp;
-                        <input type="number" placeholder="Trên" name="priceabove" style="width:20%">
-                    </p>
-                    <br><br>
-                    <p class="wipeout">
-                        <span style="float: left; margin-left: 10%">
-                            <input type="submit" name="search" value="Tìm Kiếm" class="searchandclear" />
-                        </span>
-                        <span style="float: right; margin-right: 10%">
-                            <input type="submit" value="Xóa" class="searchandclear" />
-                        </span><br>
-                    </p>
-                </div>
-            </div>
-        </div>
-    </form>
-    <!--  SEARCH PRODUCTs BEGINS -->
-
-    <!--  SHOW PRODUCTs FROM SEARCH BEGINS -->
-    <br>
-    <section class="show-products">
-        <div class="box-container" style="border-bottom: 1px solid #111;padding-bottom:40px">
-            <?php
-            $select_products = null;
-
-            if (isset($_POST['search'])) {
-                $_POST['fullname'] = addslashes($_POST['fullname']);
-                if (!empty($_POST['fullname']) && $_POST['pricebelow'] && $_POST['priceabove']) {
-                    $select_products = mysqli_query($conn, "SELECT * FROM `combo_products` WHERE combo_name LIKE '%{$_POST['fullname']}%' AND price BETWEEN {$_POST['pricebelow']} and {$_POST['priceabove']}") or die('query failed');
-                } elseif ($_POST['pricebelow'] && $_POST['priceabove']) {
-                    $select_products = mysqli_query($conn, "SELECT * FROM `combo_products` WHERE price BETWEEN {$_POST['pricebelow']} and {$_POST['priceabove']}") or die('query failed');
-                } elseif ($_POST['pricebelow']) {
-                    $select_products = mysqli_query($conn, "SELECT * FROM `combo_products` WHERE price > {$_POST['pricebelow']} ") or die('query failed');
-                } elseif ($_POST['priceabove']) {
-                    $select_products = mysqli_query($conn, "SELECT * FROM `combo_products` WHERE price < {$_POST['priceabove']}") or die('query failed');
-                } elseif (!empty($_POST['fullname'])) {
-                    $select_products = mysqli_query($conn, "SELECT * FROM `combo_products` WHERE combo_name LIKE '%{$_POST['fullname']}%'") or die('query failed');
-                }
-                // ##############
-                if ($select_products && mysqli_num_rows($select_products) > 0) {
-                    while ($fetch_products = mysqli_fetch_assoc($select_products)) {
-            ?>
-            <div class="box">
-                <img src="<?php echo $fetch_products['image_combo']; ?>" alt="">
-                <div class="name" style="height: 15vh;">
-                    <?php echo truncate_text($fetch_products['combo_name']); ?>
-                    <?php if (strlen(truncate_text($fetch_products['combo_name'])) < strlen($fetch_products['combo_name'])) { ?>
-                    <a style="font-size: 1.5rem;font-style:italic;" href="admin_combo_product.php#product"
-                        onclick="expandText(`<?php echo $fetch_products['combo_name']; ?>`);">chi tiết</a>
-                    <?php } ?>
-                </div>
-                <div class="price">
-                    <?php echo $fetch_products['price']; ?> ₫
-                </div>
-                <form action="../Controllers/adminProductController.php" method="post">
-                    <a href="./admin_detail_combo.php?id=<?php echo $fetch_products['combo_id'] ?>"
-                        class="detail_book">Xem
-                        thêm <i class="fas fa-angle-right"></i></a> <br>
-                    <div style="display:flex;justify-content:center;gap:0.5rem; ">
-                        <a href="admin_combo_product.php?update=<?php echo $fetch_products['combo_id']; ?>"
-                            class="option-btn">Cập nhật</a>
-                        <input type="submit" value="Xóa" onclick="return confirm('Bạn chắc chắn muốn xóa?');"
-                            class="delete-btn" name="delete_combo_product">
-                        <input type="hidden" value="<?php echo $fetch_products['combo_id'] ?>" name="combo_id">
-                    </div>
-
-                </form>
-                <!-- <a href="admin_combo_product.php?delete=<?php echo $fetch_products['combo_id']; ?>" class="delete-btn"
-                        onclick="return confirm('Xóa quyển sách này?');">Xóa</a> -->
-            </div>
-            <?php
-                    }
-                } else {
-                    echo '<p class="empty">Không có combo nào tại đây</p>';
-                }
-            }
-            ?>
-
-        </div>
-
-    </section>
-
-
-
-    <section class="show-products">
-        <div class="list-add-products">
-            <div class="list-products">
-                <h1 class="title1">Danh Sách Combo</h1>
-            </div>
-            <div class="add-products-button">
-                <a href="admin_combo_product.php?add-product-book" class="option-btn">Thêm Combo</a>
-            </div>
-        </div>
-        <div class="box-container" style="margin-top:40px;" id="product">
-            <?php
-            $per_page = 9;
-            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-            $start = ($page - 1) * $per_page;
-            $select_products = mysqli_query($conn, "SELECT * FROM `combo_products`") or die('query failed');
-            if (mysqli_num_rows($select_products) > 0) {
-                while ($fetch_products = mysqli_fetch_assoc($select_products)) {
-            ?>
-            <?php
-                    $total_products = mysqli_query($conn, "SELECT COUNT(*) AS total FROM `combo_products`") or die('query failed');
-                    $total_products = mysqli_fetch_assoc($total_products)['total'];
-                    $total_pages = ceil($total_products / $per_page);
-                    $current_page = isset($_GET['page']) ? $_GET['page'] : 1;
-                    $url = "http://localhost:3000/admin/View/admin_combo_product.php?page=";
-                    // Tính toán giới hạn của LIMIT trong câu truy vấn SQL
-                    $offset = ($current_page - 1) * $per_page;
-                    // Truy vấn sản phẩm trong cơ sở dữ liệu với LIMIT và OFFSET
-                    $select_products = mysqli_query($conn, "SELECT * FROM combo_products ORDER BY date ASC LIMIT $per_page OFFSET $offset") or die('query failed');
-                    if (mysqli_num_rows($select_products) > 0) {
-                        while ($fetch_products = mysqli_fetch_assoc($select_products)) {
-                    ?>
-            <div class="box">
-                <img src="<?php echo $fetch_products['image_combo']; ?>" alt="">
-                <div class="name" style="height: 15vh;">
-                    <?php echo truncate_text($fetch_products['combo_name']); ?>
-                    <?php if (strlen(truncate_text($fetch_products['combo_name'])) < strlen($fetch_products['combo_name'])) { ?>
-                    <a style="font-size: 1.5rem;font-style:italic;" href="admin_combo_product.php#product"
-                        onclick="expandText(`<?php echo $fetch_products['combo_name']; ?>`);">chi tiết</a>
-                    <?php } ?>
-                </div>
-                <div class="price">
-                    <?php echo $fetch_products['price']; ?> ₫
-                </div>
-                <form action="../Controllers/adminProductController.php" method="post">
-                    <a href="./admin_detail_combo.php?id=<?php echo $fetch_products['combo_id'] ?>"
-                        class="detail_book">Xem
-                        thêm <i class="fas fa-angle-right"></i></a> <br>
-                    <div style="display:flex;justify-content:center;gap:0.5rem; ">
-                        <a href="admin_combo_product.php?update=<?php echo $fetch_products['combo_id']; ?>"
-                            class="option-btn">Cập nhật</a>
-                        <input type="submit" value="Xóa" onclick="return confirm('Bạn chắc chắn muốn xóa?');"
-                            class="delete-btn" name="delete_combo_product">
-                        <input type="hidden" value="<?php echo $fetch_products['combo_id'] ?>" name="combo_id">
-                    </div>
-
-                </form>
-            </div>
-            <?php
-                        }
-                    }
-                    ?>
-            <?php
-                }
             } else {
-                echo '<p class="empty">Không có combo nào tại đây</p>';
+                echo '<script>document.querySelector(".add-products-combo").style.display = "none";</script>';
             }
-            ?>
-        </div>
-        <nav aria-label="Page navigation example" class="toolbar">
-            <ul class="pagination justify-content-center d-flex flex-wrap">
-                <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="<?php echo $url . ($current_page - 1); ?>" tabindex="-1">Previous</a>
-                </li>
-                <?php
-                $start_page = ($current_page <= 3) ? 1 : $current_page - 2;
-                $end_page = ($total_pages - $current_page >= 2) ? $current_page + 2 : $total_pages;
-                if ($start_page > 1) {
-                    echo '<li class="page-item"><a class="page-link" href="' . $url . '1">1</a></li>';
-                    if ($start_page > 2) {
-                        echo '<li class="page-item disabled"><a class="page-link">...</a></li>';
-                    }
-                }
-                $num_displayed_pages = $end_page - $start_page + 1;
-                $display_ellipsis = ($num_displayed_pages >= 7);
-                for ($i = $start_page; $i <= $end_page; $i++) {
-                    if ($num_displayed_pages >= 7) {
-                        if ($i == $start_page + 3 || $i == $end_page - 3) {
-                            if (!$display_ellipsis) {
-                                echo '<li class="page-item"><a class="page-link" href="#">' . $i . '</a></li>';
-                            }
-                            continue;
-                        }
-                    }
-                    if ($num_displayed_pages <= 5 || ($i >= $current_page - 2 && $i <= $current_page + 2)) {
-                        echo '<li class="page-item ' . (($i == $current_page) ? 'active' : '') . '"><a class="page-link" href="' . $url . $i . '">' . $i . '</a></li>';
-                    }
-                }
-                if ($end_page < $total_pages) {
-                    if ($end_page < $total_pages - 1) {
-                        echo '<li class="page-item disabled"><a class="page-link">...</a></li>';
-                    }
-                    echo '<li class="page-item"><a class="page-link" href="' . $url . $total_pages . '">' . $total_pages . '</a></li>';
-                }
-                ?>
-                <li class="page-item <?php echo ($current_page >= $total_pages) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="<?php echo $url . ($current_page + 1); ?>">Next</a>
-                </li>
-            </ul>
-        </nav>
-    </section>
-
-    <section class="edit-product-form">
-        <?php
-        if (isset($_GET['update'])) {
-            $update_id = $_GET['update'];
-            $update_query = mysqli_query($conn, "SELECT * FROM `combo_products` WHERE combo_id = '$update_id'") or die('query failed');
-            if (mysqli_num_rows($update_query) > 0) {
-                while ($fetch_update = mysqli_fetch_assoc($update_query)) {
         ?>
-        <form action="../Controllers/adminProductController.php" method="post" enctype="multipart/form-data">
-            <h1 class="title">Cập nhật combo sách</h1>
-            <input type="hidden" name="update_combo_id" value="<?php echo $fetch_update['combo_id']; ?>">
-            <input type="text" name="update_combo_name" value="<?php echo $fetch_update['combo_name']; ?>" class="box"
-                required placeholder="Nhập tên combo sách cần cập nhật">
-            <input type="number" name="update_price" value="<?php echo $fetch_update['price']; ?>" min="0" class="box"
-                required placeholder="Nhập giá combo sách cần cập nhật">
-            <input type="text" class="box" name="update_image_combo" value="<?php echo $fetch_update['image_combo']; ?>"
-                placeholder="Nhập url ảnh sách cần cập nhật">
-            <textarea name="update_description" class="box" cols="30" rows="3"
-                style="width: 100%"><?php echo $fetch_update['description']; ?></textarea>
-            <textarea name="update_description_detail" class="box" cols="30" rows="5"
-                style="width: 100%"><?php echo $fetch_update['description_detail']; ?></textarea>
-            <input type="text" name="update_name_1" value="<?php echo $fetch_update['name_1']; ?>" class="box" required
-                placeholder="Nhập tên sách 1 cần cập nhật">
-            <input type="text" class="box" name="update_image_1" value="<?php echo $fetch_update['image_1']; ?>"
-                placeholder="Nhập url ảnh sách 1 cần cập nhật">
-            <textarea name="update_description_1" class="box" cols="30" rows="3"
-                style="width: 100%"><?php echo $fetch_update['description_1']; ?></textarea>
-            <input type="text" name="update_name_2" value="<?php echo $fetch_update['name_2']; ?>" class="box"
-                placeholder="Nhập tên sách 1 cần cập nhật">
-            <input type="text" class="box" name="update_image_2" value="<?php echo $fetch_update['image_2']; ?>"
-                placeholder="Nhập url ảnh sách 1 cần cập nhật">
-            <textarea name="update_description_2" class="box" cols="30" rows="3"
-                style="width: 100%"><?php echo $fetch_update['description_2']; ?></textarea>
-            <input type="text" name="update_name_3" value="<?php echo $fetch_update['name_3']; ?>" class="box"
-                placeholder="Nhập tên sách 1 cần cập nhật">
-            <input type="text" class="box" name="update_image_3" value="<?php echo $fetch_update['image_3']; ?>"
-                placeholder="Nhập url ảnh sách 1 cần cập nhật">
-            <textarea name="update_description_3" class="box" cols="30" rows="3"
-                style="width: 100%"><?php echo $fetch_update['description_3']; ?></textarea>
-            <input type="submit" value="Lưu" name="update_product_combo" class="btn">
-            <input type="submit" value="Reset" name="reset_combo" id="close-update" class="delete-btn">
+        </section>
+
+    <!--  SEARCH PRODUCTS BEGINS -->
+        <form action="" method="post">
+            <div>
+                <div class="blackboard">
+                    <div class="form">
+                        <p>
+                            <label for="combo_name"><b>Tên&emsp;</b></label>
+                            <input type="text" placeholder="Nhập tên" name="combo_name">
+                        </p>
+                        <br>
+                        <p>
+                            <label for="price">Khoảng giá:</label>&emsp;
+                            <input type="number" placeholder="Trên" name="price_min" style="width:20%">&emsp;&emsp;&emsp;
+                            <input type="number" placeholder="Dưới" name="price_max" style="width:20%">
+                        </p>
+                        <br><br>
+                        <p class="wipeout">
+                            <span style="float: left; margin-left: 10%">
+                                <input type="submit" name="search" value="Tìm Kiếm" class="searchandclear" />
+                            </span>
+                            <span style="float: right; margin-right: 10%">
+                                <input type="submit" value="Xóa" class="searchandclear" />
+                            </span><br>
+                        </p>
+                    </div>
+                </div>
+            </div>
         </form>
-        <?php
+        <!--  SEARCH PRODUCTS ENDS -->
+
+     <!--  SHOW PRODUCTS FROM SEARCH BEGINS -->
+        <br>
+    
+        <section class="show-products">
+            <div class="list-add-products">
+                <div class="list-products">
+                    <h1 class="title1">Danh Sách Combo</h1>
+                </div>
+                <div class="add-products-button">
+                    <a href="admin_combo_product.php?add-product-book" class="option-btn">Thêm Combo</a>
+                </div>
+            </div>
+            <div class="box-container" style="margin-top:40px;" id="product">
+                <?php
+                // Thiết lập phân trang
+                $limit = 9; // Số lượng combo mỗi trang
+                $current_page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+                $skip = ($current_page - 1) * $limit;
+        
+                // Xử lý tìm kiếm
+                $combo_query = [];
+                $search_params = [];
+                if (isset($_POST['search'])) {
+                    $combo_name = htmlspecialchars($_POST['combo_name']);
+                    $price_min = htmlspecialchars($_POST['price_min']);
+                    $price_max = htmlspecialchars($_POST['price_max']);
+                    
+                    // Kiểm tra giá trị min/max có phải là số không và chuyển đổi
+                    $price_min = is_numeric($price_min) ? (int)$price_min : null;
+                    $price_max = is_numeric($price_max) ? (int)$price_max : null;
+
+                    // Điều kiện tìm kiếm kết hợp theo tên và giá
+                    if (!empty($combo_name) && !is_null($price_min) && !is_null($price_max)) {
+                        $combo_query = [
+                            'combo_name' => ['$regex' => $combo_name, '$options' => 'i'],
+                            'price' => ['$lte' => $price_max, '$gte' => $price_min] // Điều kiện giá nằm trong khoảng
+                        ];
+                        $search_params = ['combo_name' => $combo_name, 'price_min' => $price_min, 'price_max' => $price_max];
+                    } elseif (!empty($combo_name)) {
+                        // Tìm kiếm chỉ theo tên combo
+                        $combo_query = ['combo_name' => ['$regex' => $combo_name, '$options' => 'i']];
+                        $search_params = ['combo_name' => $combo_name];
+                    } elseif (!is_null($price_min) && !is_null($price_max)) {
+                        // Tìm kiếm chỉ theo khoảng giá
+                        $combo_query = ['price' => ['$gte' => $price_min, '$lte' => $price_max]];
+                        $search_params = ['price_min' => $price_min, 'price_max' => $price_max];
+                    } elseif (!is_null($price_min)) {
+                        // Tìm kiếm theo giá tối thiểu (nếu chỉ có price_min)
+                        $combo_query = ['price' => ['$gte' => $price_min]];
+                        $search_params = ['price_min' => $price_min];
+                    } elseif (!is_null($price_max)) {
+                        // Tìm kiếm theo giá tối đa (nếu chỉ có price_max)
+                        $combo_query = ['price' => ['$lte' => $price_max]];
+                        $search_params = ['price_max' => $price_max];
+                    }
                 }
-            }
+ 
+                // Lấy số lượng combo theo điều kiện tìm kiếm
+                $total_combos = $collection->countDocuments($combo_query);
+                $total_pages = ceil($total_combos / $limit);
+        
+                // Lấy các combo sách với điều kiện tìm kiếm
+                $cursor = $collection->find($combo_query, [
+                    'skip' => $skip,
+                    'limit' => $limit
+                ]);
+                $combos = iterator_to_array($cursor);
+        
+                if (count($combos) == 0) {
+                    echo "<p class='empty'>Không tìm thấy combo sách!!!</p>";
+                } else {
+                    foreach ($combos as $combo) {
+                        ?>
+                        <div class="box">
+                            <img src="<?php echo $combo['image_combo']; ?>" alt="">
+                            <div class="name" style="height: 15vh;">
+                                <?php echo $combo['combo_name']; ?>
+                            </div>
+                            <div class="price">
+                                <?php echo $combo['price']; ?> ₫
+                            </div>
+                            <form action="../Controllers/adminProductController.php" method="post">
+                                <a href="./admin_detail_combo.php?id=<?php echo $combo['_id']; ?>" class="detail_book">Xem thêm <i class="fas fa-angle-right"></i></a> <br>
+                                <div style="display:flex;justify-content:center;gap:0.5rem;">
+                                    <a href="admin_combo_product.php?update=<?php echo $combo['_id']; ?>" class="option-btn">Cập nhật</a>
+                                    <input type="submit" value="Xóa" onclick="return confirm('Bạn chắc chắn muốn xóa?');" class="delete-btn" name="delete_combo_product">
+                                    <input type="hidden" value="<?php echo $combo['_id']; ?>" name="combo_id">
+                                </div>
+                            </form>
+                        </div>
+                 <?php
+             }
+         }
+         ?>
+     </div>
+     </section>
+     <!-- Pagination -->
+     <div class="pagination mt-4">
+    <ul class="pagination justify-content-center d-flex flex-wrap mx-auto">
+        <?php
+        // Tổng số combo
+        $total_count = $collection->countDocuments($combo_query);
+        $total_pages = ceil($total_count / $limit);
+
+        // Nút "Prev" chỉ hiển thị nếu không phải trang đầu
+        if ($current_page > 1) {
+            echo '<li class="page-item"><a href="admin_combo_product.php?page=' . ($current_page - 1) . '" class="page-link">Prev</a></li>';
         } else {
-            echo '<script>document.querySelector(".edit-product-form").style.display = "none";</script>';
+            echo '<li class="page-item disabled"><span class="page-link">Prev</span></li>';
+        }
+
+        // Hiển thị các trang
+        for ($page = 1; $page <= $total_pages; $page++) {
+            echo '<li class="page-item' . ($page == $current_page ? ' active' : '') . '"><a href="admin_combo_product.php?page=' . $page . '" class="page-link">' . $page . '</a></li>';
+        }
+
+        // Nút "Next" chỉ hiển thị nếu không phải trang cuối
+        if ($current_page < $total_pages) {
+            echo '<li class="page-item"><a href="admin_combo_product.php?page=' . ($current_page + 1) . '" class="page-link">Next</a></li>';
+        } else {
+            echo '<li class="page-item disabled"><span class="page-link">Next</span></li>';
         }
         ?>
+    </ul>
+</div>
 
-    </section>
+<section class="edit-product-form">
+    <?php
+       if (isset($_GET['update'])) {
+        $update_id = $_GET['update'];
+        
+        // Truy vấn MongoDB
+        $combo = $collection->findOne(['combo_id' => $update_id]);
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.2/sweetalert.min.js"></script>
-    <?php include '../View/alert.php'; ?>
-    <!-- custom admin js file link  -->
-    <script src="../../public/js/admin_script.js"></script>
-    <script>
-    function expandText(fullText) {
-
-        var overlay = document.createElement('div');
-        overlay.classList.add('overlay');
-        document.body.appendChild(overlay);
-
-        var content = document.createElement('div');
-        content.classList.add('content');
-        // fullText = fullText.replace(",", "");
-        content.textContent = fullText;
-        overlay.appendChild(content);
-
-        overlay.style.display = 'block';
-        content.style.display = 'block';
-
-        overlay.addEventListener('click', function() {
-            overlay.style.display = 'none';
-            content.style.display = 'none';
-        });
+        if ($combo) {
+    ?>
+    <form action="../Controllers/adminProductController.php" method="post" enctype="multipart/form-data">
+        <h1 class="title">Cập nhật combo sách</h1>
+        <input type="hidden" name="update_combo_id" value="<?php echo $combo['combo_id']; ?>">
+        <input type="text" name="update_combo_name" value="<?php echo $combo['combo_name']; ?>" class="box" required placeholder="Nhập tên combo sách cần cập nhật">
+        <input type="number" name="update_price" value="<?php echo $combo['price']; ?>" min="0" class="box" required placeholder="Nhập giá combo sách cần cập nhật">
+        <input type="text" class="box" name="update_image_combo" value="<?php echo $combo['image_combo']; ?>" placeholder="Nhập url ảnh sách cần cập nhật">
+        <textarea name="update_description" class="box" cols="30" rows="3" style="width: 100%"><?php echo $combo['description']; ?></textarea>
+        <textarea name="update_description_detail" class="box" cols="30" rows="5" style="width: 100%"><?php echo $combo['description_detail']; ?></textarea>
+        <input type="text" name="update_name_1" value="<?php echo $combo['name_1']; ?>" class="box" required placeholder="Nhập tên sách 1 cần cập nhật">
+        <input type="text" class="box" name="update_image_1" value="<?php echo $combo['image_1']; ?>" placeholder="Nhập url ảnh sách 1 cần cập nhật">
+        <textarea name="update_description_1" class="box" cols="30" rows="3" style="width: 100%"><?php echo $combo['description_1']; ?></textarea>
+        <input type="text" name="update_name_2" value="<?php echo $combo['name_2']; ?>" class="box" placeholder="Nhập tên sách 1 cần cập nhật">
+        <input type="text" class="box" name="update_image_2" value="<?php echo $combo['image_2']; ?>" placeholder="Nhập url ảnh sách 1 cần cập nhật">
+        <textarea name="update_description_2" class="box" cols="30" rows="3" style="width: 100%"><?php echo $combo['description_2']; ?></textarea>
+        <input type="text" name="update_name_3" value="<?php echo $combo['name_3']; ?>" class="box" placeholder="Nhập tên sách 1 cần cập nhật">
+        <input type="text" class="box" name="update_image_3" value="<?php echo $combo['image_3']; ?>" placeholder="Nhập url ảnh sách 1 cần cập nhật">
+        <textarea name="update_description_3" class="box" cols="30" rows="3" style="width: 100%"><?php echo $combo['description_3']; ?></textarea>
+        <input type="submit" value="Lưu" name="update_product_combo" class="btn">
+        <input type="submit" value="Reset" name="reset_combo" id="close-update" class="delete-btn">
+    </form>
+    <?php
+        }
+    } else {
+        echo '<script>document.querySelector(".edit-product-form").style.display = "none";</script>';
     }
-    </script>
-</body>
+    ?>
+</section>
 
+</section>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.2/sweetalert.min.js"></script>
+    <?php include '../View/alert.php'; ?>
+</body>
 </html>

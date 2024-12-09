@@ -415,7 +415,7 @@ ALTER TABLE `reviews`
   MODIFY `id` int(100) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=44;
 
 --
---- create index
+-- create index
 --
 
 CREATE INDEX idx_author_name ON authors(name);
