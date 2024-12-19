@@ -1,6 +1,31 @@
 <?php
+// Kết nối MongoDB
+require '../../vendor/autoload.php'; // Tải MongoDB Driver
 
-include '../../config/config.php';
+// Kết nối đến MongoDB
+$client = new MongoDB\Client("mongodb://localhost:27017");
+$database = $client->your_mongodb_database; // Tên cơ sở dữ liệu MongoDB của bạn
+$collection = $database->orders; // Tên collection trong MongoDB
+
+// Xử lý trang và giới hạn
+$per_page = 6;
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$start = ($page - 1) * $per_page;
+
+$total_pages = 0;
+$current_page = 0;
+
+// Tính tổng số trang
+$total_orders = $collection->countDocuments();
+$total_pages = ceil($total_orders / $per_page);
+$current_page = isset($_GET['page']) ? $_GET['page'] : 1;
+$url = "http://localhost:3000/admin/View/admin_product.php?page=";
+
+// Lấy đơn hàng từ MongoDB với giới hạn và offset
+$orders = $collection->find([], [
+    'skip' => $start,
+    'limit' => $per_page
+]);
 
 session_start();
 
@@ -20,6 +45,7 @@ function truncate_text($text)
     return $text;
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -36,37 +62,37 @@ function truncate_text($text)
     <link rel="stylesheet" href="../../public/css/admin.css">
 
     <style>
-    .orders .box-container .box p {
-        margin-bottom: 0rem;
-    }
+        .orders .box-container .box p {
+            margin-bottom: 0rem;
+        }
 
-    .overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
-        z-index: 9999;
-    }
+        .overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+        }
 
-    .content {
-        position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 80%;
-        max-width: 700px;
-        background-color: #fff;
-        padding: 20px;
-        box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-        z-index: 10000;
-        display: none;
-        white-space: pre-wrap;
-        border-radius: 10px;
-        line-height: 1.5;
-        font-size: 2rem;
-    }
+        .content {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80%;
+            max-width: 700px;
+            background-color: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 10000;
+            display: none;
+            white-space: pre-wrap;
+            border-radius: 10px;
+            line-height: 1.5;
+            font-size: 2rem;
+        }
     </style>
 </head>
 
@@ -80,88 +106,68 @@ function truncate_text($text)
 
         <div class="box-container" style="margin-top:40px;">
             <?php
-            $total_pages = 0;
-            $current_page = 0;
-            $per_page = 6;
-            $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-            $start = ($page - 1) * $per_page;
-            $select_orders = mysqli_query($conn, "SELECT * FROM `orders`") or die('query failed');
-            if (mysqli_num_rows($select_orders) > 0) {
-                while ($fetch_orders = mysqli_fetch_assoc($select_orders)) {
+            if ($orders) {
+                foreach ($orders as $fetch_orders) {
             ?>
-            <?php
-                    $total_products = mysqli_query($conn, "SELECT COUNT(*) AS total FROM `orders`") or die('query failed');
-                    $total_products = mysqli_fetch_assoc($total_products)['total'];
-                    $total_pages = ceil($total_products / $per_page);
-                    $current_page = isset($_GET['page']) ? $_GET['page'] : 1;
-                    $url = "http://localhost:3000/admin/View/admin_product.php?page=";
-                    // Tính toán giới hạn của LIMIT trong câu truy vấn SQL
-                    $offset = ($current_page - 1) * $per_page;
-                    // Truy vấn sản phẩm trong cơ sở dữ liệu với LIMIT và OFFSET
-                    $select_orders = mysqli_query($conn, "SELECT * FROM orders LIMIT $per_page OFFSET $offset") or die('query failed');
-                    if (mysqli_num_rows($select_orders) > 0) {
-                        while ($fetch_orders = mysqli_fetch_assoc($select_orders)) {
-                    ?>
-            <div class="box">
-                <p> User id : <span><?php echo $fetch_orders['user_id']; ?></span> </p>
-                <p> Ngày đặt hàng : <span><?php echo $fetch_orders['placed_on']; ?></span> </p>
-                <p> Họ và Tên : <span><?php echo $fetch_orders['name']; ?></span> </p>
-                <p> Sđt : <span><?php echo $fetch_orders['number']; ?></span> </p>
-                <p> Email : <span><?php echo $fetch_orders['email']; ?></span> </p>
-                <p> Địa chỉ : <span><?php echo truncate_text($fetch_orders['address']); ?></span>
-                    <?php if (strlen(truncate_text($fetch_orders['address'])) < strlen($fetch_orders['address'])) { ?>
-                    <a style="font-size: 1.5rem;font-style:italic;" href="#"
-                        onclick="expandaddress(`<?php echo $fetch_orders['address']; ?>`);">chi tiết</a>
-                    <?php } ?>
-                </p>
-                <p class="total-products"> Tổng sản phẩm :
-                    <span><?php echo preg_replace('/,/', '', truncate_text($fetch_orders['total_products']), 1); ?></span>
-                    <?php if (strlen(truncate_text($fetch_orders['total_products'])) < strlen($fetch_orders['total_products'])) { ?>
-                    <a style="font-size: 1.5rem;font-style:italic;" href="#"
-                        onclick="expandText(`<?php echo $fetch_orders['total_products']; ?>`);">chi tiết</a>
-                    <?php } ?>
-                </p>
-                <p> Tổng giá : <span><?php echo $fetch_orders['total_price']; ?></span>
-                    <span class="rate">₫</span></h3>
-                </p>
-                <p> Phương thức thanh toán : <br>
-                    <span><?php echo $fetch_orders['method']; ?></span>
-                </p>
-                <div class="select-button">
-                    <form action="../Controllers/adminOrderController.php" method="post">
-                        <input type="hidden" name="order_id" value="<?php echo $fetch_orders['id']; ?>">
-                        <select name="update_payment">
-                            <option value="" selected disabled><?php echo $fetch_orders['payment_status']; ?></option>
-                            <option value="pending">pending</option>
-                            <option value="completed">completed</option>
-                        </select>
-                        <div style="display:flex;justify-content:center;gap:0.5rem; ">
-                            <input type="submit" value="Cập Nhật" name="update_order" class="option-btn">
-                            <input type="submit" value="Xóa" onclick="return confirm('Bạn chắc chắn muốn xóa?');"
-                                class="delete-btn" name="delete_order">
-
+                    <div class="box">
+                        <p> User id : <span><?php echo $fetch_orders['user_id']; ?></span> </p>
+                        <p> Ngày đặt hàng : <span><?php echo $fetch_orders['placed_on']; ?></span> </p>
+                        <p> Họ và Tên : <span><?php echo $fetch_orders['name']; ?></span> </p>
+                        <p> Sđt : <span><?php echo $fetch_orders['number']; ?></span> </p>
+                        <p> Email : <span><?php echo $fetch_orders['email']; ?></span> </p>
+                        <p> Địa chỉ : <span><?php echo truncate_text($fetch_orders['address']); ?></span>
+                            <?php if (strlen(truncate_text($fetch_orders['address'])) < strlen($fetch_orders['address'])) { ?>
+                                <a style="font-size: 1.5rem;font-style:italic;" href="#"
+                                    onclick="expandaddress(`<?php echo $fetch_orders['address']; ?>`);">chi tiết</a>
+                            <?php } ?>
+                        </p>
+                        <p class="total-products"> Tổng sản phẩm :
+                            <span><?php echo preg_replace('/,/', '', truncate_text($fetch_orders['total_products']), 1); ?></span>
+                            <?php if (strlen(truncate_text($fetch_orders['total_products'])) < strlen($fetch_orders['total_products'])) { ?>
+                                <a style="font-size: 1.5rem;font-style:italic;" href="#"
+                                    onclick="expandText(`<?php echo $fetch_orders['total_products']; ?>`);">chi tiết</a>
+                            <?php } ?>
+                        </p>
+                        <p> Tổng giá : <span><?php echo $fetch_orders['total_price']; ?></span>
+                            <span class="rate">₫</span></h3>
+                        </p>
+                        <p> Phương thức thanh toán : <br>
+                            <span><?php echo $fetch_orders['method']; ?></span>
+                        </p>
+                        <div class="select-button">
+                            <form action="../Controllers/adminOrderController.php" method="post">
+                                <input type="hidden" name="order_id" value="<?php echo $fetch_orders['_id']; ?>">
+                                <!-- MongoDB sử dụng _id -->
+                                <select name="update_payment">
+                                    <option value="" selected disabled><?php echo $fetch_orders['payment_status']; ?></option>
+                                    <option value="pending">pending</option>
+                                    <option value="completed">completed</option>
+                                </select>
+                                <div style="display:flex;justify-content:center;gap:0.5rem; ">
+                                    <input type="submit" value="Cập Nhật" name="update_order" class="option-btn">
+                                    <input type="submit" value="Xóa" onclick="return confirm('Bạn chắc chắn muốn xóa?');"
+                                        class="delete-btn" name="delete_order">
+                                </div>
+                            </form>
                         </div>
-                    </form>
-                </div>
-            </div>
+                    </div>
             <?php
-                        }
-                    }
                 }
             } else {
                 echo '<p class="empty">Chưa có đơn hàng nào được đặt!</p>';
             }
             ?>
         </div>
+
         <?php
         if ($total_pages != null || $current_page != null) {
         ?>
-        <nav aria-label="Page navigation example" class="toolbar">
-            <ul class="pagination justify-content-center d-flex flex-wrap">
-                <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="<?php echo $url . ($current_page - 1); ?>" tabindex="-1">Previous</a>
-                </li>
-                <?php
+            <nav aria-label="Page navigation example" class="toolbar">
+                <ul class="pagination justify-content-center d-flex flex-wrap">
+                    <li class="page-item <?php echo ($current_page <= 1) ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="<?php echo $url . ($current_page - 1); ?>" tabindex="-1">Previous</a>
+                    </li>
+                    <?php
                     $start_page = ($current_page <= 3) ? 1 : $current_page - 2;
                     $end_page = ($total_pages - $current_page >= 2) ? $current_page + 2 : $total_pages;
                     if ($start_page > 1) {
@@ -178,76 +184,52 @@ function truncate_text($text)
                                 if (!$display_ellipsis) {
                                     echo '<li class="page-item"><a class="page-link" href="#">' . $i . '</a></li>';
                                 }
-                                continue;
+                                $display_ellipsis = false;
                             }
                         }
-                        if ($num_displayed_pages <= 5 || ($i >= $current_page - 2 && $i <= $current_page + 2)) {
-                            echo '<li class="page-item ' . (($i == $current_page) ? 'active' : '') . '"><a class="page-link" href="' . $url . $i . '">' . $i . '</a></li>';
-                        }
-                    }
-                    if ($end_page < $total_pages) {
-                        if ($end_page < $total_pages - 1) {
-                            echo '<li class="page-item disabled"><a class="page-link">...</a></li>';
-                        }
-                        echo '<li class="page-item"><a class="page-link" href="' . $url . $total_pages . '">' . $total_pages . '</a></li>';
                     }
                     ?>
-                <li class="page-item <?php echo ($current_page >= $total_pages) ? 'disabled' : ''; ?>">
-                    <a class="page-link" href="<?php echo $url . ($current_page + 1); ?>">Next</a>
-                </li>
-            </ul>
-        </nav>
+                    <li class="page-item <?php echo ($current_page >= $total_pages) ? 'disabled' : ''; ?>">
+                        <a class="page-link" href="<?php echo $url . ($current_page + 1); ?>">Next</a>
+                    </li>
+                </ul>
+            </nav>
         <?php
         }
         ?>
+
     </section>
 
+    <!-- overlay content -->
+    <div id="overlay" class="overlay"></div>
+    <div id="addressContent" class="content"></div>
+    <div id="totalProductsContent" class="content"></div>
+
     <script>
-    function expandText(fullText) {
+        function expandaddress(address) {
+            var overlay = document.getElementById('overlay');
+            var content = document.getElementById('addressContent');
+            content.textContent = address;
+            overlay.style.display = 'block';
+            content.style.display = 'block';
+        }
 
-        var overlay = document.createElement('div');
-        overlay.classList.add('overlay');
-        document.body.appendChild(overlay);
+        function expandText(text) {
+            var overlay = document.getElementById('overlay');
+            var content = document.getElementById('totalProductsContent');
+            content.textContent = text;
+            overlay.style.display = 'block';
+            content.style.display = 'block';
+        }
 
-        var content = document.createElement('div');
-        content.classList.add('content');
-        fullText = fullText.replace(",", "");
-        content.textContent = fullText.replaceAll(",", "\n");
-        overlay.appendChild(content);
-
-        overlay.style.display = 'block';
-        content.style.display = 'block';
-
+        var overlay = document.getElementById('overlay');
         overlay.addEventListener('click', function() {
+            document.getElementById('addressContent').style.display = 'none';
+            document.getElementById('totalProductsContent').style.display = 'none';
             overlay.style.display = 'none';
-            content.style.display = 'none';
         });
-    }
-
-    function expandaddress(fullText) {
-        var overlay = document.createElement('div');
-        overlay.classList.add('overlay');
-        document.body.appendChild(overlay);
-
-        var content = document.createElement('div');
-        content.classList.add('content');
-        // fullText = fullText.replace(",", "");
-        content.textContent = fullText;
-        overlay.appendChild(content);
-
-        overlay.style.display = 'block';
-        content.style.display = 'block';
-
-        overlay.addEventListener('click', function() {
-            overlay.style.display = 'none';
-            content.style.display = 'none';
-        });
-    }
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sweetalert/2.1.2/sweetalert.min.js"></script>
-    <?php include '../View/alert.php'; ?>
-    <!-- custom admin js file link  -->
-    <script src="../../public/js/admin_script.js"></script>
+
 </body>
 
 </html>
